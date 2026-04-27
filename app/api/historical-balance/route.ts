@@ -1,0 +1,79 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
+
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth.response;
+
+  try {
+    const url = new URL(request.url);
+    const dateFrom = url.searchParams.get("date_from") || "";
+    const dateTo = url.searchParams.get("date_to") || "";
+
+    // Build date condition
+    let dateCondition = "";
+    if (dateFrom && dateTo) {
+      dateCondition = `AND t1.transaction_date BETWEEN '${dateFrom}' AND '${dateTo}'`;
+    } else if (dateFrom) {
+      dateCondition = `AND t1.transaction_date >= '${dateFrom}'`;
+    } else if (dateTo) {
+      dateCondition = `AND t1.transaction_date <= '${dateTo}'`;
+    }
+
+    // Saldo Awal: sum of all transactions BEFORE the date range
+    let saldoAwal = 0;
+    if (dateFrom) {
+      const saldoAwalResult = await prisma.$queryRawUnsafe<Array<{ saldo: number }>>(
+        `SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as saldo
+         FROM transactions WHERE transaction_date < '${dateFrom}'`
+      );
+      saldoAwal = Number(saldoAwalResult[0]?.saldo || 0);
+    }
+
+    // Daily data within filter range
+    const data = await prisma.$queryRawUnsafe<Array<{
+      date: string;
+      daily_income: number;
+      daily_expense: number;
+      cumulative_balance: number;
+    }>>(
+      `SELECT
+        DATE_FORMAT(t1.transaction_date, '%Y-%m-%d') as date,
+        COALESCE(SUM(CASE WHEN t1.type = 'income' THEN t1.amount ELSE 0 END), 0) as daily_income,
+        COALESCE(SUM(CASE WHEN t1.type = 'expense' THEN t1.amount ELSE 0 END), 0) as daily_expense,
+        (SELECT COALESCE(SUM(CASE WHEN t2.type = 'income' THEN t2.amount ELSE -t2.amount END), 0)
+         FROM transactions t2
+         WHERE t2.transaction_date <= t1.transaction_date) as cumulative_balance
+      FROM transactions t1
+      WHERE 1=1 ${dateCondition}
+      GROUP BY t1.transaction_date
+      ORDER BY t1.transaction_date ASC`
+    );
+
+    // Calculate summary for the filtered period
+    const totalIncome = data.reduce((sum, d) => sum + Number(d.daily_income), 0);
+    const totalExpense = data.reduce((sum, d) => sum + Number(d.daily_expense), 0);
+    const saldoAkhir = data.length > 0 ? Number(data[data.length - 1].cumulative_balance) : saldoAwal;
+
+    return NextResponse.json({
+      summary: {
+        saldoAwal,
+        totalIncome,
+        totalExpense,
+        saldoAkhir,
+        dateFrom: dateFrom || (data.length > 0 ? data[0].date : ""),
+        dateTo: dateTo || (data.length > 0 ? data[data.length - 1].date : ""),
+      },
+      data: data.map((d) => ({
+        date: d.date,
+        daily_income: Number(d.daily_income),
+        daily_expense: Number(d.daily_expense),
+        cumulative_balance: Number(d.cumulative_balance),
+      })),
+    });
+  } catch (error) {
+    console.error("Historical balance error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

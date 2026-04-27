@@ -1,0 +1,439 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.2
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost
+-- Generation Time: Apr 27, 2026 at 12:57 PM
+-- Server version: 10.11.11-MariaDB
+-- PHP Version: 8.2.28
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `cashflow`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `user_id`, `name`, `created_at`) VALUES
+(26, 1, 'Modal', '2025-11-10 11:43:56'),
+(27, 1, 'Bayar', '2025-11-10 11:43:56'),
+(28, 1, 'Beli', '2025-11-10 12:26:02'),
+(29, 1, 'SPP', '2025-11-10 12:26:06'),
+(30, 1, 'Ujian', '2025-11-10 12:26:11'),
+(31, 1, 'Transport', '2025-11-10 12:26:16'),
+(32, 1, 'Tambahan', '2025-11-10 12:26:35'),
+(33, 1, 'Setor', '2025-11-12 12:38:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organization_profile`
+--
+
+CREATE TABLE `organization_profile` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL DEFAULT 'Aplikasi Keuangan',
+  `subtitle` varchar(255) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `logo_path` varchar(255) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organization_profile`
+--
+
+INSERT INTO `organization_profile` (`id`, `name`, `subtitle`, `address`, `logo_path`, `updated_at`) VALUES
+(1, 'Yayasan Pendidikan Luar Biasa Nusantara', 'Bagian B.C.D. (Tuna Rungu, Tuna Grahita, Tuna Daksa) Hiper Aktif, Down Syndrom, Autis, Cerebralpalsy ,Yatim Piatu Usia Dini s/d Usia Lanjut Ber-asrama', 'Jl. Sempu I No. 7-8 RT 6 RW 4, Kel. Beji, Kec. Beji, Kota Depok, Jawa Barat 16421', 'public/uploads/org_logo_1762839198.png', '2025-12-31 17:48:20');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `transactions`
+--
+
+CREATE TABLE `transactions` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `category_id` int(11) DEFAULT NULL,
+  `transaction_date` date NOT NULL,
+  `type` enum('income','expense') NOT NULL,
+  `category` varchar(150) DEFAULT NULL,
+  `amount` decimal(14,2) NOT NULL,
+  `note` text DEFAULT NULL,
+  `admin_notes` text DEFAULT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `transactions`
+--
+
+INSERT INTO `transactions` (`id`, `user_id`, `category_id`, `transaction_date`, `type`, `category`, `amount`, `note`, `admin_notes`, `attachment`, `created_at`) VALUES
+(6, 1, 26, '2025-10-31', 'income', NULL, 2245550.00, 'SALDO AKHIR OKTOBER 2025', NULL, NULL, '2025-11-07 17:25:40'),
+(39, 1, 29, '2025-11-03', 'income', NULL, 600000.00, 'SPP ELVIANTO', 'November 2025', NULL, '2025-11-11 09:09:14'),
+(40, 1, 29, '2025-11-03', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', NULL, NULL, '2025-11-11 09:09:56'),
+(41, 1, 29, '2025-11-03', 'income', NULL, 300000.00, 'SPP YESAYA', 'November 2025', NULL, '2025-11-11 09:10:15'),
+(42, 1, 31, '2025-11-03', 'expense', NULL, 30000.00, 'TRANSPORT ANTAR BERKAS KE DHARMA ASIH', NULL, NULL, '2025-11-11 09:10:49'),
+(43, 1, 29, '2025-11-06', 'income', NULL, 500000.00, 'SPP M FEBRYAN', 'November 2025', NULL, '2025-11-11 09:11:17'),
+(44, 1, 29, '2025-11-06', 'income', NULL, 400000.00, 'SPP SADDA DAN SANG DHARMA', 'November 2025', NULL, '2025-11-11 09:11:57'),
+(45, 1, 27, '2025-11-06', 'income', NULL, 50000.00, 'KAOS OLAHRAGA SADDA', NULL, NULL, '2025-11-11 09:12:26'),
+(46, 1, 27, '2025-11-06', 'expense', NULL, 64000.00, 'BU TETIN BELANJA HIDROPONIK', NULL, NULL, '2025-11-11 09:13:09'),
+(47, 1, 27, '2025-11-08', 'expense', NULL, 35000.00, 'BU TETIN COD BAHAN HINDROPONIK', NULL, NULL, '2025-11-11 09:13:46'),
+(48, 1, 27, '2025-11-09', 'expense', NULL, 55000.00, 'GEMBOK GERBANG TENGAH', NULL, NULL, '2025-11-11 09:14:14'),
+(49, 1, 28, '2025-11-09', 'expense', NULL, 210000.00, 'DUPLIKAT KUNCI GEMBOK GERBANG TENGAH 14 PCS', NULL, NULL, '2025-11-11 09:14:45'),
+(50, 1, 29, '2025-11-10', 'income', NULL, 300000.00, 'SPP SALSABILA', 'November 2025', NULL, '2025-11-11 09:15:10'),
+(51, 1, 29, '2025-11-10', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'November 2025', NULL, '2025-11-11 09:15:30'),
+(52, 1, 28, '2025-11-10', 'expense', NULL, 300000.00, 'BU NISA BELI KAIN', NULL, NULL, '2025-11-11 09:16:06'),
+(53, 1, 28, '2025-11-10', 'expense', NULL, 150000.00, 'DUPLIKAT KUNCI GERBANG TENGAH DAN DEPAN 10 PCS', NULL, NULL, '2025-11-11 09:17:01'),
+(54, 1, 28, '2025-11-11', 'expense', NULL, 240000.00, 'BINGKAI A4 12 PCS', NULL, NULL, '2025-11-11 09:17:21'),
+(55, 1, 29, '2025-11-11', 'income', NULL, 400000.00, 'SPP WILDA', NULL, NULL, '2025-11-11 09:17:38'),
+(56, 1, 28, '2025-11-10', 'expense', NULL, 40000.00, 'GAYUNG DAN SIKAT WC', NULL, NULL, '2025-11-11 09:30:09'),
+(61, 1, 29, '2025-11-12', 'income', NULL, 1000000.00, 'SPP ALKHALIFI DZIKRI', 'November 2025', NULL, '2025-11-12 01:18:29'),
+(62, 1, 27, '2025-11-12', 'income', NULL, 300000.00, 'PSIKOTES DZIKRI', NULL, NULL, '2025-11-12 01:18:59'),
+(63, 1, 28, '2025-11-12', 'expense', NULL, 88000.00, 'CHARGER LAPTOP DELL + PARKIR', NULL, NULL, '2025-11-12 02:13:45'),
+(64, 1, 33, '2025-11-12', 'expense', NULL, 500000.00, 'SIMPAN UNTUK KAOS OLAHRAGA', NULL, NULL, '2025-11-12 12:39:14'),
+(66, 1, 28, '2025-11-16', 'expense', NULL, 342000.00, 'KAOS POLOS SABLON', NULL, NULL, '2025-11-16 12:13:59'),
+(67, 1, 33, '2025-11-17', 'expense', NULL, 1500000.00, 'UNTUK BELI KIPAS BU NENI', NULL, NULL, '2025-11-17 06:27:57'),
+(68, 1, 27, '2025-11-19', 'expense', NULL, 18000.00, 'ONGKIR KIRIM SAMPEL TAS PLATICPAY', NULL, NULL, '2025-11-19 04:08:10'),
+(69, 1, 28, '2025-11-19', 'expense', NULL, 102000.00, 'TOKEN LISTRIK RUANG TERAPI', NULL, NULL, '2025-11-19 09:15:47'),
+(70, 1, 28, '2025-11-19', 'expense', NULL, 27000.00, 'SPANDUK SHELTERED WORKSHOP MENJAHIT', NULL, NULL, '2025-11-19 11:31:17'),
+(71, 1, 27, '2025-11-22', 'expense', NULL, 500000.00, 'IURAN SAMPAH BULAN NOVEMBER', NULL, NULL, '2025-11-22 09:02:41'),
+(72, 1, 27, '2025-11-24', 'expense', NULL, 20000.00, 'JILID PROPOSAL, PARKIR, DAN BENSIN ANTAR BERKAS KE DINSOS', NULL, NULL, '2025-11-24 09:48:00'),
+(73, 1, 28, '2025-11-24', 'expense', NULL, 203500.00, 'TOKEN LISTRIK YPLB NUSANTARA', NULL, NULL, '2025-11-24 09:48:20'),
+(74, 1, 28, '2025-11-25', 'expense', NULL, 11500.00, 'MATERAI 1 PCS', NULL, NULL, '2025-11-25 03:51:44'),
+(75, 1, 28, '2025-11-26', 'expense', NULL, 16000.00, 'SOLATIP KERTAS', NULL, NULL, '2025-11-27 03:22:34'),
+(76, 1, 28, '2025-11-27', 'expense', NULL, 183000.00, 'KERTAS A4 DAN KERTAS COKLAT', NULL, NULL, '2025-11-27 03:22:57'),
+(77, 1, 29, '2025-11-27', 'income', NULL, 450000.00, 'SPP YUSUF', 'November 2025', NULL, '2025-11-27 03:23:13'),
+(78, 1, 28, '2025-11-27', 'expense', NULL, 107000.00, 'KERTAS KADO DAN DOUBLE TAPE', NULL, NULL, '2025-11-27 09:23:00'),
+(79, 1, 28, '2025-11-27', 'expense', NULL, 30000.00, 'GEMBOK UNTUK HIDROPONIK', NULL, NULL, '2025-11-27 09:23:17'),
+(80, 1, 29, '2025-11-28', 'income', NULL, 300000.00, 'SPP MAILINA', 'November 2025', NULL, '2025-11-28 00:55:42'),
+(81, 1, 28, '2025-11-28', 'expense', NULL, 36500.00, 'BATERAI MIC LAPANG', NULL, NULL, '2025-11-28 03:19:36'),
+(82, 1, 28, '2025-11-28', 'expense', NULL, 56000.00, 'PERMEN HGN', NULL, NULL, '2025-11-28 03:19:56'),
+(83, 1, 28, '2025-11-29', 'expense', NULL, 40000.00, 'LAMPU LED 15 watt', NULL, NULL, '2025-11-29 08:38:19'),
+(84, 1, 29, '2025-12-02', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', NULL, NULL, '2025-12-02 01:16:01'),
+(85, 1, 30, '2025-12-02', 'income', NULL, 50000.00, 'PSAS RIZKY ADITYA', NULL, NULL, '2025-12-02 01:16:19'),
+(86, 1, 27, '2025-12-02', 'income', NULL, 150000.00, 'RIZKY ADITYA CICIL PSIKOTES', NULL, NULL, '2025-12-02 01:16:38'),
+(87, 1, 29, '2025-12-02', 'income', NULL, 300000.00, 'SPP YESAYA', 'Desember 2025', NULL, '2025-12-02 01:17:45'),
+(88, 1, 29, '2025-12-02', 'income', NULL, 600000.00, 'SPP ELVIANTO', 'Desember 2025', NULL, '2025-12-02 04:12:04'),
+(89, 1, 31, '2025-12-03', 'expense', NULL, 100000.00, 'BU LIA SOSIALISASI KODING DAN AI', NULL, NULL, '2025-12-03 03:12:25'),
+(90, 1, 29, '2025-12-03', 'income', NULL, 300000.00, 'SPP ALVARO', 'November 2025', NULL, '2025-12-03 03:12:46'),
+(91, 1, 30, '2025-12-03', 'income', NULL, 100000.00, 'PSAS DARMA DAN SADDA', NULL, NULL, '2025-12-03 03:13:07'),
+(92, 1, 28, '2025-12-03', 'expense', NULL, 50000.00, 'BU NINGRUM BELANJA KERAJINAN TANGAN', NULL, NULL, '2025-12-03 09:38:31'),
+(93, 1, 30, '2025-12-05', 'income', NULL, 50000.00, 'PSAS ELVIANTO', NULL, NULL, '2025-12-05 02:05:40'),
+(94, 1, 29, '2025-12-05', 'income', NULL, 400000.00, 'SPP DARMA DAN SADDA', 'Desember 2025', NULL, '2025-12-05 08:01:38'),
+(95, 1, 30, '2025-12-05', 'income', NULL, 50000.00, 'PSAS YUSUF', NULL, NULL, '2025-12-05 08:01:56'),
+(96, 1, 27, '2025-12-08', 'expense', NULL, 150000.00, 'ROTI KEGIATAN SOSIALISASI', NULL, NULL, '2025-12-08 02:42:13'),
+(97, 1, 31, '2025-12-08', 'expense', NULL, 200000.00, 'DINAS LUAR BU DITA', NULL, NULL, '2025-12-08 02:42:41'),
+(98, 1, 27, '2025-12-09', 'income', NULL, 1.00, '(TRANSFER) NAZEEHA PUTRI  BAYAR PSIKOTES DAN KAOS OLAHRAGA RP. 400.000', NULL, NULL, '2025-12-09 01:29:43'),
+(99, 1, 30, '2025-12-09', 'income', NULL, 50000.00, 'ALVARO PSAS', NULL, NULL, '2025-12-09 01:38:03'),
+(100, 1, 30, '2025-12-09', 'income', NULL, 50000.00, 'WILDA PSAS', NULL, NULL, '2025-12-09 01:39:37'),
+(101, 1, 30, '2025-12-09', 'income', NULL, 50000.00, 'AZKA ABIDZAR PSAS', NULL, NULL, '2025-12-09 03:10:30'),
+(102, 1, 30, '2025-12-09', 'income', NULL, 50000.00, 'YESAYA PSAS', NULL, NULL, '2025-12-09 03:10:46'),
+(103, 1, 28, '2025-12-09', 'expense', NULL, 903500.00, 'BELANJA ATK KERTAS, MAP SNAIL, SPIDOL DLL', NULL, NULL, '2025-12-12 02:10:11'),
+(104, 1, 29, '2025-12-10', 'income', NULL, 1000000.00, 'SPP DZIKRI', 'Desember 2025', NULL, '2025-12-12 02:10:41'),
+(105, 1, 30, '2025-12-12', 'income', NULL, 50000.00, 'DZIKRI PSAS', NULL, NULL, '2025-12-12 02:11:08'),
+(106, 1, 29, '2025-12-12', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'Desember 2025', NULL, '2025-12-12 02:11:32'),
+(107, 1, 28, '2025-12-12', 'expense', NULL, 98500.00, 'MATERAI INVOICE TAS dan KWITANSI', NULL, NULL, '2025-12-12 03:34:02'),
+(108, 1, 33, '2025-12-14', 'expense', NULL, 500000.00, 'KAOS OLAHRAGA', NULL, NULL, '2025-12-14 04:49:38'),
+(109, 1, 33, '2025-12-14', 'expense', NULL, 3000000.00, 'KE BU NENI', NULL, NULL, '2025-12-14 04:49:57'),
+(110, 1, 31, '2025-12-17', 'expense', NULL, 50000.00, 'PA LILI ANTAR KE BANK MANDIRI', NULL, NULL, '2025-12-17 14:25:10'),
+(111, 1, 31, '2025-12-15', 'expense', NULL, 50000.00, 'ANDI CETAK BUKTI BAYAR KE PLN', NULL, NULL, '2025-12-17 14:25:56'),
+(112, 1, 31, '2025-12-17', 'expense', NULL, 50000.00, 'ANDI MENGURUS BERKAS KANIA KE BANK MANDIRI', NULL, NULL, '2025-12-17 14:26:32'),
+(113, 1, 27, '2025-12-19', 'expense', NULL, 400000.00, 'BU NENI IURAN PURNABAKTI', NULL, NULL, '2025-12-19 02:44:29'),
+(114, 1, 28, '2025-12-19', 'expense', NULL, 125000.00, 'KUE DAN GORENGAN', NULL, NULL, '2025-12-19 04:18:49'),
+(115, 1, 28, '2025-12-19', 'expense', NULL, 21000.00, 'AQUA BOTOL', NULL, NULL, '2025-12-19 04:19:06'),
+(116, 1, 27, '2025-12-20', 'expense', NULL, 30000.00, 'E TOLL KIRIMAN MAKANAN PAK ANDRI JUMAT BERBAGI', NULL, NULL, '2025-12-20 05:21:56'),
+(117, 1, 28, '2025-12-20', 'expense', NULL, 126000.00, 'BELI KUE DAN AQUA', NULL, NULL, '2025-12-20 06:21:31'),
+(118, 1, 29, '2025-11-16', 'income', NULL, 3000000.00, 'SPP HISYAM', 'November 2025', NULL, '2025-12-20 06:25:42'),
+(119, 1, 33, '2025-11-17', 'expense', NULL, 3000000.00, 'SETOR SPP HISYAM KE BU NENI', NULL, NULL, '2025-12-20 06:26:14'),
+(120, 1, 29, '2025-12-20', 'income', NULL, 400000.00, 'SPP HISYAM', 'Desember 2025', NULL, '2025-12-20 07:48:32'),
+(121, 1, 28, '2025-12-22', 'expense', NULL, 50000.00, 'CETAK SABLON ELNUSA + BENSIN', NULL, NULL, '2025-12-22 01:18:53'),
+(122, 1, 28, '2025-12-22', 'expense', NULL, 23000.00, 'MATERAI 1000 2 PCS', NULL, NULL, '2025-12-22 01:19:11'),
+(123, 1, 28, '2025-12-22', 'expense', NULL, 147000.00, 'FLASHDISK DAN MATERAI', NULL, NULL, '2025-12-22 22:39:19'),
+(124, 1, 27, '2025-12-23', 'expense', NULL, 500000.00, 'IURAN SAMPAH DESEMBER', NULL, NULL, '2025-12-22 22:45:02'),
+(125, 1, 31, '2025-12-23', 'expense', NULL, 50000.00, 'TRANSPORT BENSIN ANTAR BERKAS IJAZAH KE DISDIK JAKARTA ANDI', NULL, NULL, '2025-12-24 02:56:50'),
+(126, 1, 28, '2025-12-24', 'expense', NULL, 240000.00, 'FRAME A4 1 LUSIN', NULL, NULL, '2025-12-24 02:57:13'),
+(127, 1, 29, '2025-12-24', 'income', NULL, 600000.00, 'SPP ALVARO', 'Desember 2025 dan Januari 2026', NULL, '2025-12-24 03:33:26'),
+(128, 1, 29, '2025-12-24', 'income', NULL, 400000.00, 'SPP AZKA ABIDZAR', 'Desember 2025 dan Januari 2026', NULL, '2025-12-24 03:33:42'),
+(129, 1, 27, '2025-12-24', 'expense', NULL, 66000.00, 'PERPANJANG DOMAIN yplbnusantara.or.id 1 TAHUN', NULL, NULL, '2025-12-24 11:25:44'),
+(130, 1, 29, '2025-12-25', 'income', NULL, 1200000.00, 'SPP UDIN', 'bulan november dan desember 2025', NULL, '2025-12-25 02:04:58'),
+(131, 1, 28, '2025-12-27', 'expense', NULL, 25000.00, 'STOP KONTAK LAMPU KANTOR', NULL, NULL, '2025-12-28 04:18:34'),
+(132, 1, 28, '2025-12-28', 'expense', NULL, 205000.00, 'TOKEN LISTRIK YPLB NUSANTARA', NULL, NULL, '2025-12-28 04:19:00'),
+(134, 1, 33, '2026-01-01', 'expense', NULL, 850000.00, 'KE BU NENI UNTUK BELI RAK BUKU', '', NULL, '2026-01-01 03:47:17'),
+(135, 1, 30, '2025-12-24', 'income', NULL, 50000.00, 'SALSABILA PSAS', '', NULL, '2026-01-01 03:58:00'),
+(136, 2, 28, '2026-01-04', 'expense', NULL, 65000.00, 'Lampu Ruang TU', '', NULL, '2026-01-04 06:39:18'),
+(137, 2, 28, '2026-01-05', 'expense', NULL, 83000.00, 'CAP YAYASAN + PARKIR', '', 'bukti_695b792f1a084.jpg', '2026-01-05 08:41:19'),
+(138, 2, 31, '2026-01-08', 'expense', NULL, 500000.00, 'TRANSPORT KE DINAS BANDUNG ANDI ARKAS', '', NULL, '2026-01-08 02:48:17'),
+(139, 2, 28, '2026-01-08', 'expense', NULL, 106000.00, 'MAP PLASTIK SLETING 13 PCS DAN PARKIR', '', 'bukti_695f1b3a92f77.jpg', '2026-01-08 02:49:30'),
+(140, 2, 28, '2026-01-09', 'expense', NULL, 56000.00, 'KERTAS FOTO', '', 'bukti_6960bfc95a752.jpg', '2026-01-09 08:43:53'),
+(141, 2, 29, '2026-01-11', 'income', NULL, 1800000.00, 'SPP ATAYA NAUFAL', 'Bulan November 2025 s.d Januari 2026', NULL, '2026-01-11 07:40:36'),
+(142, 2, 29, '2026-01-11', 'income', NULL, 3000000.00, 'SPP HISYAM', 'Bulan Januari 30 hari', NULL, '2026-01-11 12:41:44'),
+(143, 2, 28, '2026-01-12', 'expense', NULL, 20000.00, 'BENSIN AMBIL BERKAS IJIN OPERASIONAL YAYASAN', '', NULL, '2026-01-12 07:14:46'),
+(144, 2, 28, '2026-01-12', 'expense', NULL, 44500.00, 'BATERAI ALKALINE 1 PAK', '', 'bukti_69649fdee64ba.jpg', '2026-01-12 07:15:53'),
+(145, 1, 28, '2026-01-13', 'expense', NULL, 587000.00, 'KERTAS A4, TINTA, MAP', '', 'bukti_696506a9a03ee.jpeg', '2026-01-12 14:35:21'),
+(146, 1, 31, '2026-01-13', 'expense', NULL, 500000.00, 'ANDI KE BANDUNG ARKAS', '', NULL, '2026-01-14 02:06:27'),
+(147, 1, 27, '2026-01-13', 'expense', NULL, 250000.00, 'AMPLOP UNTUK PA YUNDI', '', NULL, '2026-01-14 02:06:51'),
+(148, 1, 29, '2026-01-13', 'income', NULL, 1.00, 'SPP SALSA uang ke bu neni', 'bulan Desember 2025', NULL, '2026-01-14 03:28:27'),
+(149, 1, 29, '2026-01-13', 'income', NULL, 1.00, 'SPP ZIKRI uang ke buneni', 'bulan januari', NULL, '2026-01-14 03:29:17'),
+(150, 1, 29, '2026-01-13', 'income', NULL, 1.00, 'SPP ALIYAH uang ke buneni', '9 bulan', NULL, '2026-01-14 03:29:57'),
+(151, 1, 29, '2026-01-14', 'income', NULL, 400000.00, 'SPP SADDA DAN DARMA', 'Bulan Januari 2026', NULL, '2026-01-14 03:47:27'),
+(152, 1, 29, '2026-01-14', 'income', NULL, 300000.00, 'SPP YESAYA', 'Januari 2026', NULL, '2026-01-14 03:47:53'),
+(153, 1, 27, '2026-01-14', 'expense', NULL, 35000.00, 'JILID DOKUMEN', '', 'bukti_6967764b7e0d1.jpg', '2026-01-14 10:56:11'),
+(154, 1, 29, '2026-01-15', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'bulan januari 2026 dan up ke 15', NULL, '2026-01-15 01:28:04'),
+(155, 1, 29, '2026-01-15', 'income', NULL, 450000.00, 'SPP YUSUF', 'Bulan Desember 2025', NULL, '2026-01-18 00:51:00'),
+(156, 1, 27, '2026-01-15', 'income', NULL, 50000.00, 'YUSUF BUKU RAPORT', '', NULL, '2026-01-18 00:51:37'),
+(157, 1, 29, '2026-01-19', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', 'Bulan januari 2024', NULL, '2026-01-19 08:25:45'),
+(158, 1, 27, '2026-01-19', 'income', NULL, 150000.00, 'RIZKY ADITYA CICIL PSIKOTES', 'cicilan ke 2 lunas', NULL, '2026-01-19 08:26:24'),
+(159, 1, 28, '2026-01-18', 'expense', NULL, 121000.00, 'BLUETOOTH AUDIO + CHARGER', '', 'bukti_696ded2dcb22b.jpg', '2026-01-19 08:27:04'),
+(160, 1, 28, '2026-01-20', 'expense', NULL, 100000.00, 'LAMPU KELAS BU ICHA  DAN RUANG GURU', '', NULL, '2026-01-20 10:04:47'),
+(161, 1, 29, '2026-01-13', 'income', NULL, 1.00, 'SPP ELVIANTO', 'Bulan Januari 2026', NULL, '2026-01-20 10:34:04'),
+(162, 1, 33, '2026-01-20', 'expense', NULL, 3500000.00, 'KE BU NENI', 'Januari 2026', NULL, '2026-01-21 23:46:16'),
+(163, 1, 27, '2026-01-22', 'expense', NULL, 500000.00, 'IURAN KEBERSIHAN', 'Bulan Januari 2026', NULL, '2026-01-21 23:47:04'),
+(164, 1, 28, '2026-01-23', 'expense', NULL, 110000.00, 'SEMANGKA DOA JUMAT', '', NULL, '2026-01-23 10:24:59'),
+(165, 1, 28, '2026-01-25', 'expense', NULL, 25000.00, 'DUPLIKAT KUNCI RUANG TERAPI', '', NULL, '2026-01-25 05:11:39'),
+(166, 1, 28, '2026-01-26', 'expense', NULL, 36000.00, 'LAKBAN HITAM 2 PCS', '', NULL, '2026-01-26 08:44:55'),
+(167, 1, 28, '2026-01-26', 'expense', NULL, 240000.00, 'FRAME A4 12 PCS', '', NULL, '2026-01-26 08:45:16'),
+(168, 1, 27, '2026-01-27', 'income', NULL, 50000.00, 'SALSA BUKU RAPORT', '', NULL, '2026-01-27 01:11:26'),
+(169, 1, 28, '2026-01-29', 'expense', NULL, 105000.00, 'PERMEN DAN AQUA GELAS UNTUK PENIMBANGAN', '', NULL, '2026-01-30 01:53:24'),
+(170, 1, 28, '2026-01-15', 'expense', NULL, 80000.00, 'TERMINAL COLOKAN 5METER 2 PCS', '', NULL, '2026-01-30 01:57:25'),
+(171, 1, 31, '2026-01-29', 'expense', NULL, 100000.00, 'ANTAR BERKAS SPTJM KE DINAS GATSU', '', NULL, '2026-01-30 01:58:54'),
+(172, 1, 29, '2026-02-02', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', 'Februari 2024', NULL, '2026-02-02 01:36:51'),
+(173, 1, 29, '2026-02-02', 'income', NULL, 300000.00, 'SPP YESAYA', 'Bulan Februari 2026', NULL, '2026-02-02 03:57:40'),
+(174, 1, 29, '2026-02-02', 'income', NULL, 600000.00, 'SPP ELVIANTO', 'Bulan Februari 2026', NULL, '2026-02-02 04:00:17'),
+(175, 1, 29, '2026-02-03', 'income', NULL, 300000.00, 'SPP MAILINA', 'NOVEMBER 2025', NULL, '2026-02-03 04:02:15'),
+(176, 1, 28, '2026-02-03', 'expense', NULL, 101000.00, 'MATERAI +PARKIR', '', 'bukti_6981f0fd48dff.jpg', '2026-02-03 12:58:37'),
+(177, 1, 28, '2026-02-05', 'expense', NULL, 63000.00, 'GEMBOK LEMARI BU NISA', '', 'bukti_698448187a3fd.jpg', '2026-02-05 07:34:48'),
+(178, 1, 28, '2026-02-07', 'expense', NULL, 100000.00, 'BUNNINGRUM COD ALAT CETAK LABEL', '', NULL, '2026-02-08 04:24:51'),
+(179, 1, 29, '2026-02-09', 'income', NULL, 400000.00, 'SPP SADDA DAN DHARMA', 'BULAN FEBRUARI 2026', NULL, '2026-02-09 01:59:40'),
+(180, 1, 29, '2026-02-09', 'income', NULL, 1000000.00, 'SPP ZIKRI', 'BULAN FEBRUARI 2026', NULL, '2026-02-09 04:09:05'),
+(181, 1, 29, '2026-02-10', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'BULAN FEBRUARI 2026', NULL, '2026-02-10 02:04:15'),
+(182, 1, 29, '2026-02-10', 'expense', NULL, 70000.00, 'ONGKOS GRAB BU NINGRUM', '', NULL, '2026-02-10 05:42:03'),
+(183, 1, 27, '2026-02-11', 'expense', NULL, 250000.00, 'SEDOT WC + TIPS', '', NULL, '2026-02-11 03:04:52'),
+(184, 1, 28, '2026-02-11', 'expense', NULL, 116000.00, 'SPANDUK RAMADHAN', '', NULL, '2026-02-12 01:02:27'),
+(185, 1, 31, '2026-02-12', 'expense', NULL, 250000.00, 'ANTAR BERKAS LAPORAN PANCAWALUYA KE KCD', '', NULL, '2026-02-12 01:02:51'),
+(186, 1, 27, '2026-02-03', 'expense', NULL, 100000.00, 'BUKA REKENING DKI ANDI', '', NULL, '2026-02-12 01:05:51'),
+(187, 1, 31, '2026-02-13', 'expense', NULL, 100000.00, 'BU NINGRUM  PAMERAN', '', NULL, '2026-02-12 23:58:26'),
+(188, 1, 29, '2026-02-13', 'income', NULL, 300000.00, 'SPP ALVARO', 'BULAN FEBRUARI 2026', NULL, '2026-02-13 01:40:21'),
+(189, 1, 29, '2026-02-13', 'income', NULL, 450000.00, 'SPP YUSUF', 'BULAN JANUARI 2026', NULL, '2026-02-13 03:24:15'),
+(190, 1, 29, '2026-02-13', 'income', NULL, 600000.00, 'SPP DHANI RADAM', 'BULAN NOVEMBER, DESEMBER 2025 dan JANUARI 2026', NULL, '2026-02-13 03:25:38'),
+(191, 1, 33, '2026-02-13', 'expense', NULL, 1500000.00, 'KE BU NENI', '', NULL, '2026-02-13 11:40:08'),
+(192, 1, 29, '2026-02-14', 'income', NULL, 400000.00, 'SPP HIYSAM 4 HARI tgl 11 s.d 14 februari 2026.', 'bayar lagi nanti saat masuk tg 22 februari 2026', NULL, '2026-02-14 11:36:20'),
+(193, 1, 33, '2026-02-16', 'expense', NULL, 1500000.00, 'KE BU NENI', '', NULL, '2026-02-20 05:57:18'),
+(194, 1, 28, '2026-02-20', 'expense', NULL, 102000.00, 'LISTRIK RUANG TERAPI', '', 'bukti_6997f8393b042.jpeg', '2026-02-20 05:59:21'),
+(195, 1, 28, '2026-02-15', 'expense', NULL, 203500.00, 'TOKEN LISTRIK YPLB NUSANTARA', '', 'bukti_6997f94776d0f.jpeg', '2026-02-20 06:03:51'),
+(196, 1, 29, '2026-02-20', 'income', NULL, 3000000.00, 'SPP HISYAM FEBRUARI', '', NULL, '2026-02-20 06:05:45'),
+(197, 1, 32, '2026-02-19', 'income', NULL, 2600000.00, 'DARI REKENING BU LIA', '', NULL, '2026-02-20 06:06:12'),
+(198, 1, 33, '2026-02-20', 'expense', NULL, 4500000.00, 'KE BU NENI', '', NULL, '2026-02-20 06:48:48'),
+(199, 1, 28, '2026-02-21', 'expense', NULL, 240000.00, 'FRAME A4 12PCS', '', 'bukti_699c19d799eef.jpg', '2026-02-23 09:11:51'),
+(200, 1, 28, '2026-02-21', 'expense', NULL, 202000.00, 'SPANDUK PESANTREN', '', 'bukti_699c1a09c32b7.jpg', '2026-02-23 09:12:41'),
+(201, 1, 28, '2026-02-21', 'expense', NULL, 356000.00, 'BELANJA KEBUTUHAN PESANTREN EKOLOGI ONLINE', '', 'bukti_699c1a4969824.jpg', '2026-02-23 09:13:45'),
+(202, 1, 28, '2026-02-23', 'expense', NULL, 60000.00, 'SABLON ELNUSA', '', 'bukti_699c1a8626535.jpg', '2026-02-23 09:14:46'),
+(203, 1, 27, '2026-02-24', 'expense', NULL, 500000.00, 'IURAN KEBERSIHAN', 'BULAN FEBRUARI 2026', NULL, '2026-02-24 01:01:25'),
+(204, 1, 27, '2026-02-25', 'income', NULL, 300000.00, 'TES PSIKOLOGI AZKA ABIDZAR', '', NULL, '2026-02-25 03:08:04'),
+(205, 1, 29, '2026-02-28', 'income', NULL, 1200000.00, 'SPP UDIN', 'BULAN JANUARI DAN FEBRUARI 2026', NULL, '2026-02-28 10:31:21'),
+(206, 1, 29, '2026-03-04', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', 'BULAN MARET 2024', NULL, '2026-03-04 00:55:10'),
+(207, 1, 29, '2026-03-02', 'income', NULL, 300000.00, 'SPP YESAYA', 'BULAN MARET 2026', NULL, '2026-03-04 00:59:09'),
+(208, 1, 29, '2026-03-02', 'income', NULL, 600000.00, 'SPP ELVIANTO', 'BULAN MARET 2026', NULL, '2026-03-04 00:59:36'),
+(209, 1, 30, '2026-03-02', 'income', NULL, 500000.00, 'ELVIANTO CICIL UJIAN SEKOLAH', '', NULL, '2026-03-04 01:00:05'),
+(210, 1, 28, '2026-03-05', 'expense', NULL, 30000.00, 'ADAPTER HDMI SPLITTER', '', 'bukti_69a95a1babe8e.jpg', '2026-03-05 10:25:31'),
+(211, 1, 29, '2026-03-09', 'income', NULL, 300000.00, 'SPP SALSABILA', 'Bulan JANUARI 2026', NULL, '2026-03-09 02:32:20'),
+(212, 1, 27, '2026-03-09', 'expense', NULL, 853000.00, 'TAGIHAN MY REPUBLIC', 'BULAN FEBRUARI 2026', NULL, '2026-03-09 04:03:04'),
+(213, 1, 28, '2026-03-09', 'expense', NULL, 55000.00, 'SPANDUK VISI MISI DAN ABJAD SIBI', '', NULL, '2026-03-09 04:03:27'),
+(214, 1, 28, '2026-03-09', 'expense', NULL, 200000.00, 'UBAY BELANJA KEBUTUHAN HIDROPONIIK', '', NULL, '2026-03-09 04:03:48'),
+(215, 1, 29, '2026-03-10', 'income', NULL, 1.00, 'SPP SANG DHARMA TRANSFER', '', 'bukti_69af77af0e6cf.jpeg', '2026-03-10 01:45:19'),
+(216, 1, 29, '2026-03-10', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'BULAN MARET 2026', NULL, '2026-03-10 02:30:30'),
+(217, 1, 29, '2026-03-10', 'income', NULL, 1000000.00, 'SPP DZIKRI', 'BULAN MARET 2026', NULL, '2026-03-10 03:05:12'),
+(218, 1, 30, '2026-03-11', 'income', NULL, 500000.00, 'ELVIANTO UJIAN SEKOLAH', '', NULL, '2026-03-11 10:46:55'),
+(219, 1, 28, '2026-03-11', 'expense', NULL, 240000.00, 'FRAME A4 1 DUS', '', NULL, '2026-03-11 10:47:29'),
+(220, 1, 28, '2026-03-12', 'expense', NULL, 50000.00, 'KABEL TIES DAN KEBUTUHAN HIDROPONIK', '', NULL, '2026-03-12 07:15:12'),
+(221, 1, 29, '2026-03-13', 'income', NULL, 1.00, 'SPP SADDA TRANSFER', '', 'bukti_69b36b6ce196e.jpeg', '2026-03-13 01:42:04'),
+(222, 1, 29, '2026-03-13', 'income', NULL, 1.00, 'AISYAH KHANZA TRANSFER 1.000.000\r\nJULI 2025 s.d APRIL 2026', 'SPP JULI 2025 s.d APRIL 2026', 'bukti_69b37fa56e5d1.jpeg', '2026-03-13 03:07:29'),
+(223, 1, 33, '2026-03-14', 'expense', NULL, 4000000.00, 'SETOR KE BU NENI', '', NULL, '2026-03-14 03:35:12'),
+(224, 1, 28, '2026-03-12', 'expense', NULL, 245000.00, 'BATERAI RECHARGEABEL DAN CHARGERNYA', '', NULL, '2026-03-16 16:41:20'),
+(225, 1, 28, '2026-04-06', 'expense', NULL, 240000.00, 'FRAME A4 12 Pcs', '', NULL, '2026-03-18 05:08:47'),
+(226, 1, 29, '2026-04-01', 'income', NULL, 300000.00, 'SPP ALVARO', 'BULAN MARET 2026', NULL, '2026-04-01 02:17:31'),
+(227, 1, 28, '2026-04-01', 'expense', NULL, 65000.00, 'KARET GELANG 1 KILO PRAMUKA', '', NULL, '2026-04-01 02:17:59'),
+(228, 1, 28, '2026-04-01', 'expense', NULL, 106500.00, 'PLASTIK LAMINATING, KERTAS CONCORDE + PARKIR', '', 'bukti_69cdbba254c12.jpg', '2026-04-02 00:43:14'),
+(229, 1, 29, '2026-04-02', 'income', NULL, 300000.00, 'SPP MAILINA', 'BULAN DESEMBER 2025', NULL, '2026-04-02 00:45:17'),
+(230, 1, 29, '2026-04-02', 'income', NULL, 300000.00, 'SPP YESAYA', 'BULAN APRIL 2026', NULL, '2026-04-03 23:02:23'),
+(231, 1, 27, '2026-04-02', 'expense', NULL, 50000.00, 'TRANSPORT DAN ONGKIR MONEV PESANTREN EKOLOGI', '', NULL, '2026-04-03 23:02:53'),
+(232, 1, 27, '2026-04-04', 'expense', NULL, 500000.00, 'IURAN KEBERSIHAN BULAN MARET 2026', '', NULL, '2026-04-03 23:05:51'),
+(233, 1, 29, '2026-04-06', 'income', NULL, 300000.00, 'SPP DHANI RADAM', 'BULAN FEBRUARI, MARET, APRIL 2026', NULL, '2026-04-06 02:23:18'),
+(234, 1, 30, '2026-04-06', 'income', NULL, 1000000.00, 'DHANI RADAM UJIAN SEKOLAH', '', NULL, '2026-04-06 02:23:36'),
+(235, 1, 27, '2026-04-06', 'income', NULL, 300000.00, 'PSIKOTES DHANI RADAM', '', NULL, '2026-04-06 02:23:51'),
+(236, 1, 29, '2026-04-06', 'income', NULL, 600000.00, 'SPP ELVIANTO', 'BULAN APRIL 2026', NULL, '2026-04-06 02:32:38'),
+(237, 1, 29, '2026-04-06', 'income', NULL, 200000.00, 'SPP RIZKY ADITYA', 'BULAN APRIL 2024', NULL, '2026-04-06 02:33:14'),
+(238, 1, 31, '2026-04-06', 'expense', NULL, 100000.00, 'RAPAT JURI BU DITA DAN BU NISA', '', NULL, '2026-04-07 11:49:34'),
+(239, 1, 31, '2026-04-07', 'expense', NULL, 350000.00, 'SOSIALISASI AKREDITASI KCD 2 BOGOR ANDI', '', NULL, '2026-04-07 11:50:03'),
+(240, 1, 28, '2026-04-07', 'expense', NULL, 67000.00, 'MAP HIJAU 1 DUS + PARKIR', '', 'bukti_69d4f0038f76c.jpg', '2026-04-07 11:50:26'),
+(241, 1, 28, '2026-04-07', 'expense', NULL, 48000.00, 'CANVAS DAN KERTAS MANILA + PARKIR', '', 'bukti_69d4eff88425d.jpg', '2026-04-07 11:50:58'),
+(242, 1, 29, '2026-04-08', 'income', NULL, 1000000.00, 'SPP DZIKRI', 'BULAN APRIL 2026', NULL, '2026-04-08 02:30:23'),
+(243, 1, 29, '2026-04-08', 'income', NULL, 1.00, 'SPP SADDA DAN SANG DHARMA TRANSFER YPLB NUSANTARA', 'BULAN APRIL 2026', 'bukti_69d5bf0e8e461.jpeg', '2026-04-08 02:32:17'),
+(244, 1, 27, '2026-04-08', 'income', NULL, 1.00, 'SANG DHARMA CICIL PSIKOTES 100RIBU TRANSFER YAYASAN', '', 'bukti_69d5bf1c87683.jpeg', '2026-04-08 02:32:51'),
+(245, 1, NULL, '2026-04-09', 'expense', NULL, 204500.00, 'TOKEN LISTRIK YPLB NUSANTARA', '', 'bukti_69d7970845d60.jpeg', '2026-04-09 12:09:44'),
+(246, 1, 27, '2026-04-09', 'expense', NULL, 150000.00, 'IURAN PERCEPATAN PERBAIKAN RESIDU SMK NASIONAL', '', NULL, '2026-04-09 12:10:13'),
+(247, 1, 31, '2026-04-09', 'expense', NULL, 50000.00, 'TRANSPORT ANDI KE SMK NASIONAL', '', NULL, '2026-04-09 12:10:36'),
+(248, 1, 29, '2026-04-10', 'income', NULL, 300000.00, 'SPP ALVARO', 'BULAN APRIL 2026', NULL, '2026-04-10 01:45:37'),
+(249, 1, 28, '2026-04-12', 'expense', NULL, 270000.00, 'SPANDUK ULTAH KDM', '', NULL, '2026-04-12 05:38:38'),
+(250, 1, 28, '2026-04-07', 'expense', NULL, 51000.00, 'KERTAS FOTO 3 PACK', '', 'bukti_69db30a109381.jpg', '2026-04-12 05:40:03'),
+(251, 1, 33, '2026-04-13', 'expense', NULL, 1000000.00, 'BU NENI UNTUK KEPERLUAN LOMBA', '', NULL, '2026-04-13 07:57:03'),
+(252, 1, 27, '2026-04-11', 'expense', NULL, 120000.00, 'Hardcover KSP', '', 'bukti_69dd9e20d23a5.jpg', '2026-04-14 01:53:36'),
+(254, 1, 27, '2026-04-14', 'income', NULL, 1000000.00, 'UANG PANGKAL PUTRI FAHIRA', '', NULL, '2026-04-14 04:07:57'),
+(255, 1, 31, '2026-04-14', 'expense', NULL, 50000.00, 'AMBIL BERKAS KE SLB NEGERI ANDI', '', NULL, '2026-04-14 04:11:23'),
+(256, 1, 28, '2026-04-14', 'expense', NULL, 240000.00, 'Baso dan minuman rapat akreditasi', '', NULL, '2026-04-14 11:46:03'),
+(257, 1, 27, '2026-04-17', 'income', NULL, 200000.00, 'BAJU OLAHRAGA PUTRI NATASHA', '', NULL, '2026-04-17 07:53:21'),
+(258, 1, 33, '2026-04-19', 'expense', NULL, 1200000.00, 'KE BU NENI UNTUK LKSN DAN CANVAS', '', NULL, '2026-04-19 07:20:34'),
+(259, 1, 29, '2026-04-22', 'income', NULL, 500000.00, 'SPP NAZNEEN', 'BULAN APRIL 2026', NULL, '2026-04-22 02:07:52'),
+(260, 1, 28, '2026-04-22', 'expense', NULL, 60000.00, 'MATERAI 5PCS PARKIR', '', 'bukti_69ea017f039e2.jpg', '2026-04-23 03:56:47'),
+(261, 1, 27, '2026-04-23', 'expense', NULL, 150000.00, 'IURAN PENGUSULAN PIP SLB DEPOK', '', NULL, '2026-04-23 03:57:25'),
+(262, 1, 31, '2026-04-23', 'expense', NULL, 50000.00, 'TRANSPORT ANDI PENGUSULAN PIP SMK NASIONAL', '', NULL, '2026-04-23 03:57:55'),
+(263, 1, 28, '2026-04-22', 'income', NULL, 250000.00, 'BAJU OLAHRAGA MAURA', '', NULL, '2026-04-23 03:58:28'),
+(264, 1, 28, '2026-04-23', 'expense', NULL, 539000.00, 'JAM DINDING, KERTAS, POST IT, PARKIR', '', NULL, '2026-04-23 11:26:20'),
+(265, 1, 28, '2026-04-23', 'expense', NULL, 33000.00, 'BATERAI JAM DINDING', '', NULL, '2026-04-23 11:27:08'),
+(266, 1, 28, '2026-04-23', 'expense', NULL, 82000.00, 'SPANDUK REFLEKSI PEMBELAJARAN PARKIR', '', 'bukti_69ea0238796f7.jpg', '2026-04-23 11:27:52'),
+(267, 1, 31, '2026-04-16', 'expense', NULL, 50000.00, 'ANTAR BERKAS PENGAJUAN PIP JAKARTA', '', NULL, '2026-04-23 11:33:57'),
+(268, 1, 27, '2026-04-24', 'expense', NULL, 500000.00, 'IURAN KEBERSIHAN BULAN APRIL 2026', '', NULL, '2026-04-23 22:53:40'),
+(269, 1, 28, '2026-04-24', 'expense', NULL, 66000.00, 'AQUA GELAS OBAT CACING', '', NULL, '2026-04-24 06:32:09'),
+(270, 1, 28, '2026-04-24', 'expense', NULL, 158000.00, 'TEMPAT SAMPAH 6 KELAS', '', NULL, '2026-04-24 08:56:43'),
+(271, 1, 28, '2026-04-24', 'expense', NULL, 240000.00, 'FRAME A4 12PCS', '', NULL, '2026-04-24 08:57:06'),
+(272, 1, 31, '2026-04-24', 'expense', NULL, 80000.00, 'ANTAR BERKAS KE PUSKESMAS DAN SLB NEGERI', '', NULL, '2026-04-25 11:00:28'),
+(273, 1, 32, '2026-04-25', 'income', NULL, 1000000.00, 'DARI PA JON UNTUK AKREDITASI', '', NULL, '2026-04-25 11:00:59'),
+(274, 1, 28, '2026-04-25', 'expense', NULL, 152000.00, 'DOUBLE TAPE DAN KABEL TIES', '', NULL, '2026-04-25 11:01:47'),
+(275, 1, 27, '2026-04-25', 'expense', NULL, 30000.00, 'JILID BERKAS', '', NULL, '2026-04-25 11:02:09'),
+(276, 1, 27, '2026-04-26', 'expense', NULL, 20000.00, 'JILID BERKAS', '', NULL, '2026-04-26 09:15:17'),
+(277, 1, 28, '2026-04-26', 'expense', NULL, 375000.00, 'TAPLAK BATIK, SENDAL DAN PAPAN JALAN', '', 'bukti_69edec6f0fbc0.jpg', '2026-04-26 09:16:16'),
+(278, 1, 28, '2026-04-26', 'expense', NULL, 44000.00, 'TISSUE', '', NULL, '2026-04-26 09:16:33'),
+(279, 1, 28, '2026-04-26', 'expense', NULL, 70000.00, 'SIOMAY ANAK ANAK AKREDITASI', '', NULL, '2026-04-26 10:17:39'),
+(280, 1, 28, '2026-04-26', 'expense', NULL, 120000.00, 'KESET TOILET', '', NULL, '2026-04-26 10:17:59'),
+(281, 1, 28, '2026-04-26', 'expense', NULL, 325000.00, 'PECEL AYAM PERSIAPAN AKREDITASI', '', NULL, '2026-04-26 10:25:35'),
+(282, 1, 32, '2026-04-26', 'income', NULL, 1000000.00, 'DARI PA JON AKREDIATASI', '', NULL, '2026-04-26 10:42:18'),
+(283, 1, 28, '2026-04-26', 'expense', NULL, 120000.00, 'SAPU IJUK', '', NULL, '2026-04-26 13:21:08'),
+(284, 1, 28, '2026-04-27', 'expense', NULL, 26000.00, 'NASI UDUK', '', NULL, '2026-04-27 04:26:44'),
+(285, 1, 28, '2026-04-27', 'expense', NULL, 90000.00, 'SNACK ASESOR', '', NULL, '2026-04-27 04:26:58'),
+(286, 1, 28, '2026-04-27', 'expense', NULL, 74000.00, 'MAKAN SIANG ASESOR AKREDITASI', '', NULL, '2026-04-27 04:27:33'),
+(287, 1, 28, '2026-04-27', 'expense', NULL, 57500.00, 'MATERAI 5 PCS', '', NULL, '2026-04-27 04:28:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `role` enum('admin','staf') DEFAULT 'admin',
+  `password` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `role`, `password`, `created_at`, `deleted_at`) VALUES
+(1, 'admin', 'admin', '$2y$10$sGbZTJ6W05FGr0VZV76OJuSrmvBNhJ.DgkQmRTBB5M7uTz.KNjBi2', '2025-11-07 14:23:29', NULL),
+(2, 'afirmansyah', 'staf', '$2y$12$hHA4qkSnC1WJd0Tr5l3bp.jSrB5QHx0dZyvME4tCxNYQi2EcvIt6m', '2025-12-31 16:04:14', NULL),
+(5, 'tatausaha', 'staf', '$2y$10$UEyPX2ksaRWPim40nnsdze1GrZ9iUobGWe56/foED4pxuX3GGSrHa', '2026-01-01 08:16:35', '2026-01-01 08:45:18');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `organization_profile`
+--
+ALTER TABLE `organization_profile`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `transactions`
+--
+ALTER TABLE `transactions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `fk_transactions_category` (`category_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+
+--
+-- AUTO_INCREMENT for table `organization_profile`
+--
+ALTER TABLE `organization_profile`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `transactions`
+--
+ALTER TABLE `transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=288;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `transactions`
+--
+ALTER TABLE `transactions`
+  ADD CONSTRAINT `fk_transactions_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
