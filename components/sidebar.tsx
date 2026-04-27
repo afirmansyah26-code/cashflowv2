@@ -96,7 +96,7 @@ export default function Sidebar() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-footer-text">Cashflow App v2.0</div>
+          <div className="sidebar-footer-text">Aplikasi Keuangan v2.0</div>
         </div>
       </aside>
     </>

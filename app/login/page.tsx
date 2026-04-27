@@ -1,14 +1,28 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
+
+interface AppMeta {
+  app_name: string;
+  subtitle: string | null;
+  logo_path: string | null;
+}
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [meta, setMeta] = useState<AppMeta>({ app_name: "", subtitle: null, logo_path: null });
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/app-meta")
+      .then((r) => r.json())
+      .then(setMeta)
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +50,18 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">💰</div>
-        <h1 className="login-title">Cashflow App</h1>
-        <p className="login-subtitle">Masuk ke akun Anda</p>
+        {meta.logo_path ? (
+          <img
+            src={meta.logo_path}
+            alt="Logo"
+            style={{ width: 72, height: 72, objectFit: "contain", margin: "0 auto 12px", display: "block" }}
+          />
+        ) : (
+          <div className="login-logo">💰</div>
+        )}
+        <h1 className="login-title">{meta.app_name || "Cashflow App"}</h1>
+        {meta.subtitle && <p className="login-subtitle">{meta.subtitle}</p>}
+        {!meta.subtitle && <p className="login-subtitle">Masuk ke akun Anda</p>}
         {error && <div className="login-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">

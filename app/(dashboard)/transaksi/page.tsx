@@ -33,6 +33,7 @@ export default function TransaksiPage(){
   const[file,setFile]=useState<File|null>(null);
   const[role,setRole]=useState("");
   const[isMobile,setIsMobile]=useState(false);
+  const[lightbox,setLightbox]=useState<string|null>(null);
 
   useEffect(()=>{
     fetch("/api/me").then(r=>r.json()).then(d=>{if(d.role)setRole(d.role);}).catch(()=>{});
@@ -161,7 +162,7 @@ export default function TransaksiPage(){
                   <td className={`text-amount ${t.type==="income"?"text-income":"text-expense"}`} style={{textAlign:"right",padding:isMobile?"6px 4px":undefined}}>{isMobile?formatRupiahShort(t.amount):formatRupiah(t.amount)}</td>
                   <td style={{color:"var(--text-secondary)",padding:isMobile?"6px 4px":undefined}}>{t.note||"-"}</td>
                   {!isMobile&&<td style={{color:"var(--text-muted)"}}>{t.admin_notes||"-"}</td>}
-                  {!isMobile&&<td style={{textAlign:"center"}}>{t.attachment?<a href={`/uploads/bukti/${t.attachment}`} target="_blank" rel="noreferrer" title="Klik untuk memperbesar"><img src={`/uploads/bukti/${t.attachment}`} alt="Bukti" style={{width:36,height:36,objectFit:"cover",borderRadius:"var(--radius-sm)",border:"1px solid var(--border-color)"}} /></a>:<span className="text-muted">-</span>}</td>}
+                  {!isMobile&&<td style={{textAlign:"center"}}>{t.attachment?<button className="bukti-thumb" onClick={()=>setLightbox(`/uploads/bukti/${t.attachment}`)} title="Klik untuk memperbesar"><img src={`/uploads/bukti/${t.attachment}`} alt="Bukti" /></button>:<span className="text-muted">-</span>}</td>}
                   <td style={{whiteSpace:"nowrap",padding:isMobile?"6px 2px":undefined}}><button className="btn btn-sm btn-secondary btn-icon" onClick={()=>openEdit(t)} title="Edit"><Pencil size={14}/></button>{" "}<button className="btn btn-sm btn-danger btn-icon" onClick={()=>{setDeleteTx(t);setShowDelete(true);}} title="Hapus"><Trash2 size={14}/></button></td>
                 </tr>
               ))}
@@ -186,6 +187,52 @@ export default function TransaksiPage(){
       <Modal isOpen={showDelete} onClose={()=>setShowDelete(false)} title="Konfirmasi Hapus" size="sm" footer={<><button className="btn btn-secondary" onClick={()=>setShowDelete(false)}>Batal</button><button className="btn btn-danger" onClick={handleDelete} disabled={saving}>{saving?"Menghapus...":"Hapus"}</button></>}>
         <div style={{textAlign:"center",padding:"16px 0"}}><Trash2 size={48} color="var(--danger)" style={{marginBottom:12}}/><p style={{fontSize:16,fontWeight:600}}>Yakin ingin menghapus transaksi ini?</p><p className="text-muted">Tindakan ini tidak dapat dibatalkan.</p></div>
       </Modal>
+
+      {/* Lightbox */}
+      {lightbox&&<div className="lightbox-overlay" onClick={()=>setLightbox(null)}>
+        <button className="lightbox-close" onClick={()=>setLightbox(null)}><X size={24}/></button>
+        <img src={lightbox} alt="Bukti" className="lightbox-img" onClick={e=>e.stopPropagation()} />
+      </div>}
+
+      <style jsx>{`
+        .bukti-thumb {
+          background: none; border: none; cursor: pointer; padding: 0;
+          border-radius: var(--radius-sm); overflow: hidden;
+          display: inline-block; width: 36px; height: 36px;
+          border: 1px solid var(--border-color);
+          transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .bukti-thumb:hover {
+          transform: scale(1.5);
+          box-shadow: 0 4px 16px rgba(0,0,0,.25);
+          z-index: 10; position: relative;
+        }
+        .bukti-thumb img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .lightbox-overlay {
+          position: fixed; inset: 0; z-index: 9999;
+          background: rgba(0,0,0,.85); display: flex;
+          align-items: center; justify-content: center;
+          cursor: pointer; animation: fadeIn .2s;
+        }
+        .lightbox-close {
+          position: absolute; top: 16px; right: 16px;
+          background: rgba(255,255,255,.15); border: none;
+          color: #fff; cursor: pointer; border-radius: 50%;
+          width: 40px; height: 40px; display: flex;
+          align-items: center; justify-content: center;
+          transition: background .2s;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,.3); }
+        .lightbox-img {
+          max-width: 90vw; max-height: 85vh;
+          object-fit: contain; border-radius: 8px;
+          cursor: default; animation: zoomIn .2s;
+        }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes zoomIn { from{transform:scale(.8);opacity:0} to{transform:scale(1);opacity:1} }
+      `}</style>
     </div>
   );
 }
