@@ -193,6 +193,36 @@ tbody tr:hover { background: var(--bg-tertiary); }
   ::-webkit-scrollbar { display: none !important; width: 0 !important; }
   .table-wrap { overflow: visible !important; }
 
+  /* Force light colors for ALL elements (override dark mode) */
+  *, *::before, *::after {
+    color-scheme: light !important;
+  }
+  :root {
+    --bg-primary: #fff !important;
+    --bg-secondary: #f8f9fa !important;
+    --bg-card: #fff !important;
+    --text-primary: #000 !important;
+    --text-secondary: #333 !important;
+    --text-muted: #666 !important;
+    --border-color: #ddd !important;
+  }
+  table, thead, tbody, tr, th, td {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ddd !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  thead th {
+    background: transparent !important;
+    color: #000 !important;
+  }
+  .card, .table-wrap, div, section, main {
+    background: transparent !important;
+    background-color: #fff !important;
+    color: #000 !important;
+  }
+
   /* Show print header */
   .print-report-header { display: block !important; margin-bottom: 16px; }
   .print-report-header-inner {

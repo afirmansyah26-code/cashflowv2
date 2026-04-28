@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  cashflow:
+    # Anda bisa menggunakan image custom Anda "sisfonext-node:latest" atau node bawaan
+    image: cashflownext-node:latest
+    container_name: cashflow_next
+    working_dir: /home/node/src
+    labels:
+      com.webstation.type: "nodejs"
+
+    environment:
+      - NODE_ENV=production
+      - PORT=6000
+    
+    env_file:
+      - .env
+
+    volumes:
+      # Ubah "/volume1/web/cashflow-next" sesuai dengan folder tempat Anda menaruh project ini di NAS
+      - /volume1/web/cashflow-next:/home/node/src
+      # Mount socket MariaDB NAS (Bawaan package MariaDB Synology)
+      - /run/mysqld:/run/mysqld
+
+    ports:
+      - "6000:6000"
+
+    # Perintah untuk menjalankan Next.js
+    command: npm start
+
+    networks:
+      - synotunnel
+
+    restart: unless-stopped
+
+networks:
+  synotunnel:
+    external: true
