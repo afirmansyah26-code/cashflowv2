@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  cashflow-app:
+    build: .
+    container_name: cashflow_next
+    restart: always
+    ports:
+      - "6000:6000"
+    environment:
+      - NODE_ENV=production
+      - PORT=6000
+    env_file:
+      - .env
+    volumes:
+      - ./public/uploads:/app/public/uploads

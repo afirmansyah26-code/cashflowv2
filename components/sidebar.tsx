@@ -96,7 +96,7 @@ export default function Sidebar() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-footer-text">Aplikasi Keuangan v2.0</div>
+          <div className="sidebar-footer-text">Aplikasi Keuangan v2.0 <br />&copy;2026 | afirmansyah</div>
         </div>
       </aside>
     </>
