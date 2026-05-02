@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const month = url.searchParams.get("month") || "";
-    const year = url.searchParams.get("year") || String(new Date().getFullYear());
+    const year = url.searchParams.get("year") || "";
     const filterType = url.searchParams.get("filter_type") || "";
     const filterCategory = url.searchParams.get("filter_category") || "";
 
