@@ -29,18 +29,21 @@ export async function GET(request: NextRequest) {
       const yearStart = `${now.getFullYear()}-01-01`;
       dateCondition = `AND transaction_date >= '${yearStart}'`;
     } else {
+      // month = last 30 days
       dateFormat = "%Y-%m-%d";
-      const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      dateCondition = `AND transaction_date >= '${monthStart}'`;
+      const monthAgo = new Date(now);
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      dateCondition = `AND transaction_date >= '${monthAgo.toISOString().split("T")[0]}'`;
     }
 
-    // Summary totals - always show ALL-TIME (not filtered by period)
+    // Summary totals - filtered by selected period
     const summaryResult = await prisma.$queryRawUnsafe<Array<{ totalIncome: number; totalExpense: number; totalTransactions: number }>>(
       `SELECT
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense,
         COUNT(*) as totalTransactions
-      FROM transactions`
+      FROM transactions
+      WHERE 1=1 ${dateCondition}`
     );
 
     const totalIncome = Number(summaryResult[0]?.totalIncome || 0);
