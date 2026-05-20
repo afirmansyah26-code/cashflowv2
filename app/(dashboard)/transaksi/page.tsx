@@ -119,7 +119,16 @@ export default function TransaksiPage(){
       </div>
       <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.transaction_date} onChange={e=>setForm({...form,transaction_date:e.target.value})} required/></div>
       <div className="form-group"><label className="form-label">Catatan</label><textarea className="form-textarea" rows={2} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
-      <div className="form-group"><label className="form-label">Bukti Transaksi</label><input className="form-input" type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)}/><p className="form-help">Maks 5MB. Format: JPG, PNG, WEBP, PDF.</p>{form.attachment&&!file&&<p className="form-help">File saat ini: {form.attachment}</p>}</div>
+      <div className="form-group"><label className="form-label">Bukti Transaksi</label>
+        <input id="fileInput" type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)} style={{display:"none"}}/>
+        <button type="button" className="upload-btn" onClick={()=>document.getElementById("fileInput")?.click()}>
+          <Upload size={18}/>
+          <span>{file ? file.name : "Pilih File..."}</span>
+        </button>
+        <p className="form-help">Maks 5MB. Format: JPG, PNG, WEBP, PDF.</p>
+        {file&&file.type.startsWith("image/")&&<div className="upload-preview"><img src={URL.createObjectURL(file)} alt="Preview"/></div>}
+        {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/uploads/bukti/${form.attachment}`} alt="Bukti" className="upload-existing-thumb"/></div>}
+      </div>
       <div className="form-group"><label className="form-label">Admin Notes</label><textarea className="form-textarea" rows={2} value={form.admin_notes} onChange={e=>setForm({...form,admin_notes:e.target.value})} placeholder="Catatan internal"/><p className="form-help">Hanya tampil di halaman transaksi, tidak di laporan.</p></div>
     </>
   );
@@ -232,6 +241,34 @@ export default function TransaksiPage(){
         }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
         @keyframes zoomIn { from{transform:scale(.8);opacity:0} to{transform:scale(1);opacity:1} }
+        .upload-btn {
+          display: flex; align-items: center; gap: 10px;
+          width: 100%; padding: 12px 16px;
+          background: var(--bg-secondary); color: var(--text-secondary);
+          border: 1.5px dashed var(--border-color);
+          border-radius: var(--radius-sm);
+          cursor: pointer; font-size: 14px; font-family: inherit;
+          transition: border-color .2s, background .2s, color .2s;
+        }
+        .upload-btn:hover {
+          border-color: var(--accent); background: rgba(99,102,241,.06);
+          color: var(--accent);
+        }
+        .upload-preview {
+          margin-top: 8px; border-radius: var(--radius-sm); overflow: hidden;
+          border: 1px solid var(--border-color); max-width: 160px;
+        }
+        .upload-preview img {
+          display: block; width: 100%; height: auto; object-fit: contain;
+        }
+        .upload-existing {
+          margin-top: 8px; display: flex; align-items: center; gap: 8px;
+        }
+        .upload-existing-thumb {
+          width: 48px; height: 48px; object-fit: cover;
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--border-color);
+        }
       `}</style>
     </div>
   );

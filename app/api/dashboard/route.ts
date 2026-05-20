@@ -36,14 +36,13 @@ export async function GET(request: NextRequest) {
       dateCondition = `AND transaction_date >= '${monthAgo.toISOString().split("T")[0]}'`;
     }
 
-    // Summary totals - filtered by selected period
+    // Summary totals - always show ALL data regardless of filter
     const summaryResult = await prisma.$queryRawUnsafe<Array<{ totalIncome: number; totalExpense: number; totalTransactions: number }>>(
       `SELECT
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense,
         COUNT(*) as totalTransactions
-      FROM transactions
-      WHERE 1=1 ${dateCondition}`
+      FROM transactions`
     );
 
     const totalIncome = Number(summaryResult[0]?.totalIncome || 0);
