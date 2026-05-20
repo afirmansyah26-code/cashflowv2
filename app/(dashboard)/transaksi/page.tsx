@@ -121,11 +121,13 @@ export default function TransaksiPage(){
       <div className="form-group"><label className="form-label">Catatan</label><textarea className="form-textarea" rows={2} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
       <div className="form-group"><label className="form-label">Bukti Transaksi</label>
         <input id="fileInput" type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)} style={{display:"none"}}/>
-        <button type="button" className="upload-btn" onClick={()=>document.getElementById("fileInput")?.click()}>
-          <Upload size={18}/>
-          <span>{file ? file.name : "Pilih File..."}</span>
-        </button>
-        <p className="form-help">Maks 5MB. Format: JPG, PNG, WEBP, PDF.</p>
+        <div style={{display:"flex",alignItems:"center",gap:12,border:"1px solid var(--border-color)",borderRadius:"var(--radius-sm)",padding:6,background:"var(--bg-secondary)"}}>
+          <button type="button" onClick={()=>document.getElementById("fileInput")?.click()} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 18px",background:"var(--accent)",color:"#fff",border:"none",borderRadius:"var(--radius-sm)",cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0}}>
+            <Upload size={14}/> Pilih File
+          </button>
+          <span style={{fontSize:13,color:"var(--text-muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file ? file.name : "Tidak ada file dipilih"}</span>
+        </div>
+        <p className="form-help">Format: JPG, PNG, WEBP, PDF. Maks 5MB.</p>
         {file&&file.type.startsWith("image/")&&<div className="upload-preview"><img src={URL.createObjectURL(file)} alt="Preview"/></div>}
         {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/uploads/bukti/${form.attachment}`} alt="Bukti" className="upload-existing-thumb"/></div>}
       </div>
@@ -241,19 +243,7 @@ export default function TransaksiPage(){
         }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
         @keyframes zoomIn { from{transform:scale(.8);opacity:0} to{transform:scale(1);opacity:1} }
-        .upload-btn {
-          display: flex; align-items: center; gap: 10px;
-          width: 100%; padding: 12px 16px;
-          background: var(--bg-secondary); color: var(--text-secondary);
-          border: 1.5px dashed var(--border-color);
-          border-radius: var(--radius-sm);
-          cursor: pointer; font-size: 14px; font-family: inherit;
-          transition: border-color .2s, background .2s, color .2s;
-        }
-        .upload-btn:hover {
-          border-color: var(--accent); background: rgba(99,102,241,.06);
-          color: var(--accent);
-        }
+
         .upload-preview {
           margin-top: 8px; border-radius: var(--radius-sm); overflow: hidden;
           border: 1px solid var(--border-color); max-width: 160px;
