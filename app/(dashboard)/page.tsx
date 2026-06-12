@@ -25,7 +25,7 @@ function formatShort(n: number) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState("all");
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const chartRef = useRef(null);

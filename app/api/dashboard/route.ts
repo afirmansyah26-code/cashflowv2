@@ -36,13 +36,14 @@ export async function GET(request: NextRequest) {
       dateCondition = `AND transaction_date >= '${monthAgo.toISOString().split("T")[0]}'`;
     }
 
-    // Summary totals - always show ALL data regardless of filter
+    // Summary totals - filtered by period
     const summaryResult = await prisma.$queryRawUnsafe<Array<{ totalIncome: number; totalExpense: number; totalTransactions: number }>>(
       `SELECT
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense,
         COUNT(*) as totalTransactions
-      FROM transactions`
+      FROM transactions
+      WHERE 1=1 ${dateCondition}`
     );
 
     const totalIncome = Number(summaryResult[0]?.totalIncome || 0);
@@ -74,8 +75,23 @@ export async function GET(request: NextRequest) {
       LIMIT 8`
     );
 
-    // Recent transactions
+    // Recent transactions - filtered by period
+    const recentWhere: Record<string, unknown> = {};
+    if (period === "week") {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      recentWhere.transaction_date = { gte: weekAgo };
+    } else if (period === "month") {
+      const monthAgo = new Date(now);
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      recentWhere.transaction_date = { gte: monthAgo };
+    } else if (period === "year") {
+      recentWhere.transaction_date = { gte: new Date(`${now.getFullYear()}-01-01`) };
+    }
+    // period === "all" → no date filter
+
     const recentTransactions = await prisma.transactions.findMany({
+      where: recentWhere,
       take: 10,
       orderBy: [{ transaction_date: "desc" }, { id: "desc" }],
       include: { categories: true, users: { select: { username: true } } },
