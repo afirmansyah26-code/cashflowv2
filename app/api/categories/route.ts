@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireAdmin } from "@/lib/auth";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireUser();
@@ -27,6 +28,16 @@ export async function POST(request: NextRequest) {
 
     const category = await prisma.categories.create({
       data: { name: name.trim(), user_id: auth.session.id },
+    });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.CREATE,
+      entityType: "category",
+      entityId: category.id,
+      oldValue: null,
+      newValue: category,
+      request,
     });
 
     return NextResponse.json({ success: true, category }, { status: 201 });

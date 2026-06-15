@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireAdmin } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 const UPLOAD_DIR = "public/uploads/kop-surat";
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -30,7 +31,7 @@ export async function GET() {
 }
 
 // POST: Create new print header
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
       logoPath = await saveLogo(logoFile);
     }
 
-    await prisma.print_headers.create({
+    const created = await prisma.print_headers.create({
       data: {
         name,
         institution_name,
@@ -63,6 +64,16 @@ export async function POST(req: Request) {
         signer_title: (fd.get("signer_title") as string) || null,
         signer_city: (fd.get("signer_city") as string) || null,
       },
+    });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "print_headers",
+      entityId: created.id,
+      oldValue: null,
+      newValue: created,
+      request: req,
     });
 
     return NextResponse.json({ success: true, message: "Kop surat berhasil ditambahkan" });

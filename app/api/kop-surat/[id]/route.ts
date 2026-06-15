@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import fs from "fs";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 const UPLOAD_DIR = "public/uploads/kop-surat";
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -66,7 +67,18 @@ export async function PUT(
     // Handle "set_default" shortcut
     if (fd.get("set_default") === "true") {
       await prisma.print_headers.updateMany({ data: { is_default: false } });
-      await prisma.print_headers.update({ where: { id: Number(id) }, data: { is_default: true } });
+      const updated = await prisma.print_headers.update({ where: { id: Number(id) }, data: { is_default: true } });
+
+      await createAuditLog({
+        userId: auth.session.id,
+        action: AUDIT_ACTION.SETTING_CHANGE,
+        entityType: "print_headers",
+        entityId: Number(id),
+        oldValue: existing,
+        newValue: updated,
+        request: req,
+      });
+
       return NextResponse.json({ success: true, message: "Default berhasil diubah" });
     }
 
@@ -84,7 +96,7 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Nama dan Nama Lembaga wajib diisi" }, { status: 400 });
     }
 
-    await prisma.print_headers.update({
+    const updated = await prisma.print_headers.update({
       where: { id: Number(id) },
       data: {
         name,
@@ -99,6 +111,16 @@ export async function PUT(
         signer_title: (fd.get("signer_title") as string) || null,
         signer_city: (fd.get("signer_city") as string) || null,
       },
+    });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "print_headers",
+      entityId: Number(id),
+      oldValue: existing,
+      newValue: updated,
+      request: req,
     });
 
     return NextResponse.json({ success: true, message: "Kop surat berhasil diperbarui" });
@@ -123,6 +145,17 @@ export async function DELETE(
 
     if (existing.logo) deleteLogo(existing.logo);
     await prisma.print_headers.delete({ where: { id: Number(id) } });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "print_headers",
+      entityId: Number(id),
+      oldValue: existing,
+      newValue: null,
+      request: req,
+    });
+
     return NextResponse.json({ success: true, message: "Kop surat berhasil dihapus" });
   } catch (error) {
     console.error("Kop surat DELETE error:", error);

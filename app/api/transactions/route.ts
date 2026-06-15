@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { adminTransactionSchema, transactionSchema, getTransactionsQuerySchema } from "@/lib/validations/transaction";
 import { rateLimit } from "@/lib/rate-limit";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser();
@@ -159,6 +160,16 @@ export async function POST(request: NextRequest) {
         admin_notes: admin_notes || null,
         attachment: attachment || null,
       },
+    });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.CREATE,
+      entityType: "transaction",
+      entityId: transaction.id,
+      oldValue: null,
+      newValue: transaction,
+      request,
     });
 
     return NextResponse.json({ success: true, transaction: { ...transaction, amount: Number(transaction.amount) } }, { status: 201 });

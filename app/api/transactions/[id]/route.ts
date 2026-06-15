@@ -5,6 +5,7 @@ import { adminUpdateTransactionSchema, transactionIdSchema } from "@/lib/validat
 import { rateLimit } from "@/lib/rate-limit";
 import { unlink } from "fs/promises";
 import path from "path";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 function isPathInside(parent: string, child: string): boolean {
   const relativePath = path.relative(parent, child);
@@ -109,6 +110,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       await deleteAttachmentSafe(existing.attachment);
     }
 
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.UPDATE,
+      entityType: "transaction",
+      entityId: updated.id,
+      oldValue: existing,
+      newValue: updated,
+      request,
+    });
+
     return NextResponse.json({ success: true, transaction: { ...updated, amount: Number(updated.amount) } });
   } catch (error) {
     console.error("Transaction PUT error:", error);
@@ -152,6 +163,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (existing.attachment) {
       await deleteAttachmentSafe(existing.attachment);
     }
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.DELETE,
+      entityType: "transaction",
+      entityId: existing.id,
+      oldValue: existing,
+      newValue: null,
+      request,
+    });
 
     return NextResponse.json({ success: true, message: "Transaksi berhasil dihapus" });
   } catch (error) {

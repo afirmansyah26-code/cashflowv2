@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,14 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user: { id: user.id, username: user.username, role: user.role },
+    });
+
+    await createAuditLog({
+      userId: user.id,
+      action: AUDIT_ACTION.LOGIN,
+      entityType: "user",
+      entityId: user.id,
+      request,
     });
 
     response.cookies.set("token", token, {

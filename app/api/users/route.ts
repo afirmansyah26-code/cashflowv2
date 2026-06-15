@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -50,9 +51,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const safeUser = { id: user.id, username: user.username, role: user.role };
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.CREATE,
+      entityType: "user",
+      entityId: user.id,
+      oldValue: null,
+      newValue: safeUser,
+      request,
+    });
+
     return NextResponse.json({
       success: true,
-      user: { id: user.id, username: user.username, role: user.role },
+      user: safeUser,
     }, { status: 201 });
   } catch (error) {
     console.error("Users POST error:", error);

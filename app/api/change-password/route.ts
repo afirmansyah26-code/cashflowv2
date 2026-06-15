@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   const auth = await requireUser();
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
         password: hashed,
         session_version: { increment: 1 }
       },
+    });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.PASSWORD_CHANGE,
+      entityType: "user",
+      entityId: auth.session.id,
+      request,
     });
 
     return NextResponse.json({ success: true, message: "Password berhasil diubah" });
