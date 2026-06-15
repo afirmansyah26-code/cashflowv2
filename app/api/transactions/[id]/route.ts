@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
-import { adminUpdateTransactionSchema, transactionIdSchema } from "@/lib/validations/transaction";
+import { requireUser } from "@/lib/auth";
+import { adminUpdateTransactionSchema, updateTransactionSchema, transactionIdSchema } from "@/lib/validations/transaction";
 import { rateLimit } from "@/lib/rate-limit";
 import { unlink } from "fs/promises";
 import path from "path";
@@ -35,7 +35,7 @@ async function deleteAttachmentSafe(attachmentUrl: string | null) {
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const limitCheck = await rateLimit({
@@ -62,13 +62,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
 
-    // For PUT, we currently use adminUpdateTransactionSchema for both admin and staff before Patch 6 role splitting.
-    const parsed = adminUpdateTransactionSchema.safeParse(body);
+    let parsed;
+    if (auth.session.role === "admin") {
+      parsed = adminUpdateTransactionSchema.safeParse(body);
+    } else {
+      if ("admin_notes" in body) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      parsed = updateTransactionSchema.safeParse(body);
+    }
+
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message || "Data tidak valid" }, { status: 400 });
     }
 
-    const { category_id, type, amount, transaction_date, note, admin_notes, attachment } = parsed.data;
+    const { category_id, type, amount, transaction_date, note, attachment } = parsed.data;
+    const admin_notes = "admin_notes" in parsed.data ? parsed.data.admin_notes : undefined;
 
     // Validate category exists if provided
     if (category_id) {
@@ -128,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const limitCheck = await rateLimit({

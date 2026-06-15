@@ -125,7 +125,10 @@ export async function POST(request: NextRequest) {
       parsed = adminTransactionSchema.safeParse(body);
     } else {
       if ('admin_notes' in body) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (body.admin_notes !== "" && body.admin_notes !== null) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        delete body.admin_notes;
       }
       parsed = transactionSchema.safeParse(body);
     }

@@ -73,7 +73,9 @@ export default function TransaksiPage(){
     e.preventDefault();setSaving(true);
     try{
       const attachment=await uploadFile();
-      const r=await fetch("/api/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,amount:parseNum(form.amount),attachment})});
+      const payload={...form,amount:parseNum(form.amount),attachment} as any;
+      if(role!=="admin") delete payload.admin_notes;
+      const r=await fetch("/api/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const d=await r.json();
       if(d.success){showToast("success","Transaksi berhasil ditambahkan");setShowAdd(false);resetForm();loadData();}
       else showToast("error",d.error||"Gagal menyimpan");
@@ -85,7 +87,9 @@ export default function TransaksiPage(){
     try{
       let attachment=form.attachment;
       if(file)attachment=await uploadFile();
-      const r=await fetch(`/api/transactions/${editTx.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,amount:parseNum(form.amount),attachment})});
+      const payload={...form,amount:parseNum(form.amount),attachment} as any;
+      if(role!=="admin") delete payload.admin_notes;
+      const r=await fetch(`/api/transactions/${editTx.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const d=await r.json();
       if(d.success){showToast("success","Transaksi berhasil diperbarui");setShowEdit(false);resetForm();loadData();}
       else showToast("error",d.error||"Gagal memperbarui");
@@ -131,7 +135,9 @@ export default function TransaksiPage(){
         {file&&file.type.startsWith("image/")&&<div className="upload-preview"><img src={URL.createObjectURL(file)} alt="Preview"/></div>}
         {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/api/files/${encodeURIComponent(form.attachment)}`} alt="Bukti" className="upload-existing-thumb"/></div>}
       </div>
-      <div className="form-group"><label className="form-label">Admin Notes</label><textarea className="form-textarea" rows={2} value={form.admin_notes} onChange={e=>setForm({...form,admin_notes:e.target.value})} placeholder="Catatan internal"/><p className="form-help">Hanya tampil di halaman transaksi, tidak di laporan.</p></div>
+      {role === "admin" && (
+        <div className="form-group"><label className="form-label">Admin Notes</label><textarea className="form-textarea" rows={2} value={form.admin_notes} onChange={e=>setForm({...form,admin_notes:e.target.value})} placeholder="Catatan internal"/><p className="form-help">Hanya tampil di halaman transaksi, tidak di laporan.</p></div>
+      )}
     </>
   );
 
