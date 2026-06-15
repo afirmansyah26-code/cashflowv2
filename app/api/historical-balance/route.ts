@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       const saldoAwalResult = await prisma.$queryRaw<Array<{ saldo: number }>>`
         SELECT COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as saldo
         FROM transactions
-        WHERE transaction_date < ${dateFrom}
+        WHERE transaction_date < ${dateFrom} AND deleted_at IS NULL
       `;
       saldoAwal = Number(saldoAwalResult[0]?.saldo || 0);
     }
@@ -82,9 +82,9 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CASE WHEN t1.type = 'expense' THEN t1.amount ELSE 0 END), 0) as daily_expense,
         (SELECT COALESCE(SUM(CASE WHEN t2.type = 'income' THEN t2.amount ELSE -t2.amount END), 0)
          FROM transactions t2
-         WHERE t2.transaction_date <= t1.transaction_date) as cumulative_balance
+         WHERE t2.transaction_date <= t1.transaction_date AND t2.deleted_at IS NULL) as cumulative_balance
       FROM transactions t1
-      WHERE 1=1
+      WHERE t1.deleted_at IS NULL
       ${dateCondition}
       GROUP BY t1.transaction_date
       ORDER BY t1.transaction_date ASC

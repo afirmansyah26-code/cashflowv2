@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    const existing = await prisma.transactions.findUnique({ where: { id: txId } });
+    const existing = await prisma.transactions.findFirst({ where: { id: txId, deleted_at: null } });
     if (!existing) {
       return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
     }
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
     const txId = idParsed.data;
 
-    const existing = await prisma.transactions.findUnique({ where: { id: txId } });
+    const existing = await prisma.transactions.findFirst({ where: { id: txId, deleted_at: null } });
     if (!existing) {
       return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
     }
@@ -158,11 +158,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.transactions.delete({ where: { id: txId } });
-
-    if (existing.attachment) {
-      await deleteAttachmentSafe(existing.attachment);
-    }
+    const updated = await prisma.transactions.update({
+      where: { id: txId },
+      data: {
+        deleted_at: new Date(),
+        deleted_by: auth.session.id,
+      },
+    });
 
     await createAuditLog({
       userId: auth.session.id,
@@ -170,7 +172,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       entityType: "transaction",
       entityId: existing.id,
       oldValue: existing,
-      newValue: null,
+      newValue: updated,
       request,
     });
 

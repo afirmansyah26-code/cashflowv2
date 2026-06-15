@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const filterType = url.searchParams.get("filter_type") || "";
     const filterCategory = url.searchParams.get("filter_category") || "";
 
-    const where: Prisma.transactionsWhereInput = {};
+    const where: Prisma.transactionsWhereInput = {
+      deleted_at: null,
+    };
 
     // Date filters
     if (month && year) {

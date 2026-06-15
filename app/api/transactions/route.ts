@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     const { page, limit, search, filter_type: filterType, filter_category: filterCategory, date_from: dateFrom, date_to: dateTo } = parsedQuery.data;
 
-    const where: Prisma.transactionsWhereInput = {};
+    const where: Prisma.transactionsWhereInput = {
+      deleted_at: null,
+    };
 
     if (search) {
       where.OR = [
@@ -140,8 +142,8 @@ export async function POST(request: NextRequest) {
     if (category_id) {
       const category = await prisma.categories.findFirst({ 
         where: { 
-          id: category_id 
-          // deleted_at: null // TODO: Uncomment when soft delete is implemented in Patch 10
+          id: category_id,
+          // deleted_at: null // TODO: Uncomment when soft delete is implemented for categories. Currently only transactions have deleted_at
         } 
       });
       if (!category) {
