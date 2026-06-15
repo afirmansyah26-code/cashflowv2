@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUser, requireAdmin } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -21,7 +21,7 @@ async function saveLogo(file: File): Promise<string> {
 
 // GET: List all print headers
 export async function GET() {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
   const headers = await prisma.print_headers.findMany({
     orderBy: [{ is_default: "desc" }, { name: "asc" }],
@@ -31,7 +31,7 @@ export async function GET() {
 
 // POST: Create new print header
 export async function POST(req: Request) {
-  const auth = await requireAuth();
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   try {

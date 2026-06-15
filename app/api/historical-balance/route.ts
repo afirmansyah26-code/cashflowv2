@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
 function isValidDate(value: string): boolean {
@@ -20,7 +20,7 @@ function isValidDate(value: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {

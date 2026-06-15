@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
-  const auth = await requireRole("admin");
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   try {
@@ -22,7 +22,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireRole("admin");
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   try {

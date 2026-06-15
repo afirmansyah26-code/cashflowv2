@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
-import { adminTransactionSchema, getTransactionsQuerySchema } from "@/lib/validations/transaction";
+import { adminTransactionSchema, transactionSchema, getTransactionsQuerySchema } from "@/lib/validations/transaction";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -61,20 +61,28 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      transactions: transactions.map((t) => ({
-        id: t.id,
-        user_id: t.user_id,
-        category_id: t.category_id,
-        category_name: t.categories?.name || t.category || "-",
-        type: t.type,
-        amount: Number(t.amount),
-        transaction_date: t.transaction_date,
-        note: t.note,
-        admin_notes: t.admin_notes,
-        attachment: t.attachment,
-        created_at: t.created_at,
-        username: t.users?.username || "-",
-      })),
+      transactions: transactions.map((t) => {
+        const mapped = {
+          id: t.id,
+          user_id: t.user_id,
+          category_id: t.category_id,
+          category_name: t.categories?.name || t.category || "-",
+          type: t.type,
+          amount: Number(t.amount),
+          transaction_date: t.transaction_date,
+          note: t.note,
+          admin_notes: t.admin_notes,
+          attachment: t.attachment,
+          created_at: t.created_at,
+          username: t.users?.username || "-",
+        };
+        if (auth.session.role.toLowerCase() !== "admin") {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { admin_notes: _admin_notes, ...safeTransaction } = mapped;
+          return safeTransaction;
+        }
+        return mapped;
+      }),
       total,
       page,
       limit,
@@ -87,7 +95,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -98,12 +106,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
 
-    const parsed = adminTransactionSchema.safeParse(body);
+    let parsed;
+    if (auth.session.role.toLowerCase() === "admin") {
+      parsed = adminTransactionSchema.safeParse(body);
+    } else {
+      if ('admin_notes' in body) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      parsed = transactionSchema.safeParse(body);
+    }
+    
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message || "Data tidak valid" }, { status: 400 });
     }
 
-    const { category_id, type, amount, transaction_date, note, admin_notes, attachment } = parsed.data;
+    const data = parsed.data;
+    const admin_notes = 'admin_notes' in data ? (data as { admin_notes?: string | null }).admin_notes : null;
+    const { category_id, type, amount, transaction_date, note, attachment } = data;
 
     // Validate category exists
     if (category_id) {

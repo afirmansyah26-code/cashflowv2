@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
-import { requireAuth } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -25,7 +25,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ filename: string }> }
 ) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const { filename } = await params;
