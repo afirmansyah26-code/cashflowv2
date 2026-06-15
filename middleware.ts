@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const publicPaths = ["/login", "/api/login", "/api/logout", "/api/app-meta", "/api/files"];
+const publicPaths = ["/login", "/api/login", "/api/logout", "/api/app-meta"];
 
 function buildRedirect(path: string, request: NextRequest): URL {
   const url = new URL(path, request.url);

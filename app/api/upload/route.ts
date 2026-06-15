@@ -5,15 +5,17 @@ import { randomUUID } from "crypto";
 import path from "path";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const PRIVATE_EVIDENCE_DIRECTORY = path.resolve(process.cwd(), "storage", "private", "bukti");
+const PUBLIC_LOGO_DIRECTORY = path.resolve(process.cwd(), "public", "uploads");
 
 const UPLOAD_CONFIG = {
   bukti: {
-    directory: ["bukti"],
-    publicBasePath: "/uploads/bukti",
+    directory: PRIVATE_EVIDENCE_DIRECTORY,
+    responseBasePath: "/api/files",
   },
   logo: {
-    directory: [],
-    publicBasePath: "/uploads",
+    directory: PUBLIC_LOGO_DIRECTORY,
+    responseBasePath: "/uploads",
   },
 } as const;
 
@@ -75,12 +77,11 @@ export async function POST(request: NextRequest) {
 
     const uploadType = uploadTypeValue;
     const uploadConfig = UPLOAD_CONFIG[uploadType];
-    const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
-    const uploadDir = path.resolve(uploadsRoot, ...uploadConfig.directory);
+    const uploadDir = uploadConfig.directory;
     const uniqueName = `${randomUUID()}${extension}`;
     const filePath = path.resolve(uploadDir, uniqueName);
 
-    if (!isPathInside(uploadsRoot, uploadDir) || !isPathInside(uploadDir, filePath)) {
+    if (!isPathInside(uploadDir, filePath)) {
       return NextResponse.json({ error: "Lokasi upload tidak valid" }, { status: 400 });
     }
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(filePath, buffer);
 
-    const publicPath = `${uploadConfig.publicBasePath}/${uniqueName}`;
+    const publicPath = `${uploadConfig.responseBasePath}/${uniqueName}`;
 
     return NextResponse.json({ success: true, filename: uniqueName, path: publicPath });
   } catch (error) {
