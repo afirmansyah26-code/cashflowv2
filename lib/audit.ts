@@ -9,6 +9,8 @@ export const AUDIT_ACTION = {
   LOGIN: "LOGIN",
   PASSWORD_CHANGE: "PASSWORD_CHANGE",
   SETTING_CHANGE: "SETTING_CHANGE",
+  RESTORE: "RESTORE",
+  PURGE: "PURGE",
 } as const;
 
 export type AuditActionType = typeof AUDIT_ACTION[keyof typeof AUDIT_ACTION];
