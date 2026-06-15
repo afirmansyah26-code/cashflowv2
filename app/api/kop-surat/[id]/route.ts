@@ -20,10 +20,31 @@ async function saveLogo(file: File): Promise<string> {
   return `kop-surat/${filename}`;
 }
 
+function isPathInside(parent: string, child: string): boolean {
+  const relativePath = path.relative(parent, child);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith(`..${path.sep}`) &&
+      relativePath !== ".." &&
+      !path.isAbsolute(relativePath))
+  );
+}
+
 function deleteLogo(logoPath: string) {
-  const fullPath = path.join(process.cwd(), "public/uploads", logoPath);
-  if (fs.existsSync(fullPath)) {
-    unlink(fullPath).catch(() => {});
+  try {
+    const filename = logoPath.split("/").pop();
+    if (!filename) return;
+
+    const baseDir = path.resolve(process.cwd(), "public", "uploads", "kop-surat");
+    const fullPath = path.resolve(baseDir, filename);
+
+    if (!isPathInside(baseDir, fullPath)) return;
+
+    if (fs.existsSync(fullPath)) {
+      unlink(fullPath).catch(() => {});
+    }
+  } catch (err) {
+    console.error("Failed to delete logo:", err);
   }
 }
 

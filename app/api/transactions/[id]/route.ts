@@ -3,6 +3,35 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { adminUpdateTransactionSchema, transactionIdSchema } from "@/lib/validations/transaction";
 import { rateLimit } from "@/lib/rate-limit";
+import { unlink } from "fs/promises";
+import path from "path";
+
+function isPathInside(parent: string, child: string): boolean {
+  const relativePath = path.relative(parent, child);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith(`..${path.sep}`) &&
+      relativePath !== ".." &&
+      !path.isAbsolute(relativePath))
+  );
+}
+
+async function deleteAttachmentSafe(attachmentUrl: string | null) {
+  if (!attachmentUrl) return;
+  try {
+    const filename = attachmentUrl.split("/").pop();
+    if (!filename) return;
+    
+    const baseDir = path.resolve(process.cwd(), "storage", "private", "bukti");
+    const filepath = path.resolve(baseDir, filename);
+
+    if (!isPathInside(baseDir, filepath)) return;
+
+    await unlink(filepath);
+  } catch (err) {
+    console.error("Failed to delete attachment:", err);
+  }
+}
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
@@ -76,6 +105,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       },
     });
 
+    if (attachment !== undefined && existing.attachment && existing.attachment !== attachment) {
+      await deleteAttachmentSafe(existing.attachment);
+    }
+
     return NextResponse.json({ success: true, transaction: { ...updated, amount: Number(updated.amount) } });
   } catch (error) {
     console.error("Transaction PUT error:", error);
@@ -115,6 +148,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     await prisma.transactions.delete({ where: { id: txId } });
+
+    if (existing.attachment) {
+      await deleteAttachmentSafe(existing.attachment);
+    }
 
     return NextResponse.json({ success: true, message: "Transaksi berhasil dihapus" });
   } catch (error) {
