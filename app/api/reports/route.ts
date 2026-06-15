@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const filterType = url.searchParams.get("filter_type") || "";
     const filterCategory = url.searchParams.get("filter_category") || "";
 
-    const where: Prisma.transactionsWhereInput = {};
+    const where: Prisma.transactionsWhereInput = {
+      deleted_at: null,
+    };
 
     // Date filters
     if (month && year) {

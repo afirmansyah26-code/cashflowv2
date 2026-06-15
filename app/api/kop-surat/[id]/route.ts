@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import fs from "fs";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 const UPLOAD_DIR = "public/uploads/kop-surat";
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -20,10 +21,31 @@ async function saveLogo(file: File): Promise<string> {
   return `kop-surat/${filename}`;
 }
 
+function isPathInside(parent: string, child: string): boolean {
+  const relativePath = path.relative(parent, child);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith(`..${path.sep}`) &&
+      relativePath !== ".." &&
+      !path.isAbsolute(relativePath))
+  );
+}
+
 function deleteLogo(logoPath: string) {
-  const fullPath = path.join(process.cwd(), "public/uploads", logoPath);
-  if (fs.existsSync(fullPath)) {
-    unlink(fullPath).catch(() => {});
+  try {
+    const filename = logoPath.split("/").pop();
+    if (!filename) return;
+
+    const baseDir = path.resolve(process.cwd(), "public", "uploads", "kop-surat");
+    const fullPath = path.resolve(baseDir, filename);
+
+    if (!isPathInside(baseDir, fullPath)) return;
+
+    if (fs.existsSync(fullPath)) {
+      unlink(fullPath).catch(() => {});
+    }
+  } catch (err) {
+    console.error("Failed to delete logo:", err);
   }
 }
 
@@ -32,7 +54,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth();
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
   const { id } = await params;
 
@@ -45,7 +67,18 @@ export async function PUT(
     // Handle "set_default" shortcut
     if (fd.get("set_default") === "true") {
       await prisma.print_headers.updateMany({ data: { is_default: false } });
-      await prisma.print_headers.update({ where: { id: Number(id) }, data: { is_default: true } });
+      const updated = await prisma.print_headers.update({ where: { id: Number(id) }, data: { is_default: true } });
+
+      await createAuditLog({
+        userId: auth.session.id,
+        action: AUDIT_ACTION.SETTING_CHANGE,
+        entityType: "print_headers",
+        entityId: Number(id),
+        oldValue: existing,
+        newValue: updated,
+        request: req,
+      });
+
       return NextResponse.json({ success: true, message: "Default berhasil diubah" });
     }
 
@@ -63,7 +96,7 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Nama dan Nama Lembaga wajib diisi" }, { status: 400 });
     }
 
-    await prisma.print_headers.update({
+    const updated = await prisma.print_headers.update({
       where: { id: Number(id) },
       data: {
         name,
@@ -80,6 +113,16 @@ export async function PUT(
       },
     });
 
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "print_headers",
+      entityId: Number(id),
+      oldValue: existing,
+      newValue: updated,
+      request: req,
+    });
+
     return NextResponse.json({ success: true, message: "Kop surat berhasil diperbarui" });
   } catch (error) {
     console.error("Kop surat PUT error:", error);
@@ -92,7 +135,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth();
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
   const { id } = await params;
 
@@ -102,6 +145,17 @@ export async function DELETE(
 
     if (existing.logo) deleteLogo(existing.logo);
     await prisma.print_headers.delete({ where: { id: Number(id) } });
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "print_headers",
+      entityId: Number(id),
+      oldValue: existing,
+      newValue: null,
+      request: req,
+    });
+
     return NextResponse.json({ success: true, message: "Kop surat berhasil dihapus" });
   } catch (error) {
     console.error("Kop surat DELETE error:", error);

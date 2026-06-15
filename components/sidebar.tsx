@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "./sidebar-provider";
 import {
   LayoutDashboard, ArrowLeftRight, FileText, TrendingUp,
-  Settings, X
+  Settings, X, Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { href: "/laporan", label: "Laporan", icon: <FileText size={20} /> },
   { href: "/saldo-historis", label: "Saldo Historis", icon: <TrendingUp size={20} /> },
   { href: "/pengaturan", label: "Pengaturan", icon: <Settings size={20} />, adminOnly: true },
+  { href: "/pengaturan/recycle-bin", label: "Recycle Bin", icon: <Trash2 size={20} />, adminOnly: true },
 ];
 
 export default function Sidebar() {

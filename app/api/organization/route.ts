@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "@/lib/auth";
+import { requireUser, requireAdmin } from "@/lib/auth";
+import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function GET() {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -18,7 +19,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireRole("admin");
+  const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   try {
@@ -53,6 +54,16 @@ export async function POST(request: NextRequest) {
         },
       });
     }
+
+    await createAuditLog({
+      userId: auth.session.id,
+      action: AUDIT_ACTION.SETTING_CHANGE,
+      entityType: "organization_profile",
+      entityId: org.id,
+      oldValue: existing,
+      newValue: org,
+      request,
+    });
 
     return NextResponse.json({ success: true, organization: org });
   } catch (error) {

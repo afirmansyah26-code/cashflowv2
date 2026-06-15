@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 const JWT_SECRET: string = process.env.JWT_SECRET;
@@ -8,8 +9,8 @@ const JWT_SECRET: string = process.env.JWT_SECRET;
 export interface SessionPayload {
   id: number;
   role: string;
-  username: string;
-  full_name?: string;
+  session_version: number;
+  username?: string;
 }
 
 type AuthSuccess = { ok: true; session: SessionPayload };
@@ -29,6 +30,47 @@ export async function requireAuth(): Promise<AuthResult> {
   const session = await getSession();
   if (!session) return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   return { ok: true, session };
+}
+
+/** Require User (reads from DB to ensure user is active and role is up-to-date) */
+export async function requireUser(): Promise<AuthResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+
+  const user = await prisma.users.findFirst({
+    where: {
+      id: session.id,
+      deleted_at: null,
+    },
+    select: {
+      id: true,
+      username: true,
+      role: true,
+      session_version: true,
+    }
+  });
+
+  if (!user || user.session_version !== session.session_version) {
+    return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+
+  // Override session role with DB role
+  session.role = user.role || 'staf';
+  session.username = user.username;
+
+  return { ok: true, session };
+}
+
+/** Require Admin (reads from DB via requireUser) */
+export async function requireAdmin(): Promise<AuthResult> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth;
+
+  if (auth.session.role.toLowerCase() !== "admin") {
+    return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  return auth;
 }
 
 export function signToken(payload: SessionPayload) {

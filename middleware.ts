@@ -46,12 +46,18 @@ export async function middleware(request: NextRequest) {
     const role = payload.role as string;
 
     // Admin-only routes
-    const adminOnlyPaths = ["/pengguna", "/api/users", "/kategori", "/api/categories"];
+    const adminOnlyPaths = ["/pengguna", "/api/users", "/kategori"];
     if (role !== "admin" && adminOnlyPaths.some((p) => pathname.startsWith(p))) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       return NextResponse.redirect(buildRedirect("/", request));
+    }
+
+    if (pathname.startsWith("/api/categories")) {
+      if (request.method !== "GET" && role !== "admin") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     return NextResponse.next();

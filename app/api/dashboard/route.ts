@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense,
         COUNT(*) as totalTransactions
       FROM transactions
-      WHERE 1=1
+      WHERE deleted_at IS NULL
       ${dateCondition}
     `);
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
         SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
       FROM transactions
-      WHERE 1=1
+      WHERE deleted_at IS NULL
       ${dateCondition}
       GROUP BY period
       ORDER BY period ASC
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       SELECT c.name, SUM(t.amount) as total
       FROM transactions t
       JOIN categories c ON t.category_id = c.id
-      WHERE t.type = 'expense'
+      WHERE t.type = 'expense' AND t.deleted_at IS NULL
       ${aliasedDateCondition}
       GROUP BY c.name
       ORDER BY total DESC
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     `);
 
     // Recent transactions - filtered by period
-    const recentWhere: Record<string, unknown> = {};
+    const recentWhere: Record<string, unknown> = { deleted_at: null };
     if (period === "week") {
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -111,11 +111,11 @@ export async function GET(request: NextRequest) {
         DATE_FORMAT(transaction_date, '%Y-%m-%d') as date,
         (SELECT SUM(CASE WHEN t2.type = 'income' THEN t2.amount ELSE -t2.amount END)
          FROM transactions t2
-         WHERE t2.transaction_date <= t1.transaction_date) as balance
+         WHERE t2.transaction_date <= t1.transaction_date AND t2.deleted_at IS NULL) as balance
       FROM (
         SELECT DISTINCT transaction_date
         FROM transactions
-        WHERE 1=1
+        WHERE deleted_at IS NULL
         ${dateCondition}
         ORDER BY transaction_date ASC
       ) t1
