@@ -38,7 +38,7 @@ model transactions {
   admin_notes      String?           @db.Text
   attachment       String?           @db.VarChar(255)
   created_at       DateTime?         @default(now()) @db.Timestamp(0)
-  categories       categories?       @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_transactions_category")
+  categories       categories?       @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "fk_transactions_category")
   users            users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "transactions_ibfk_1")
 
   @@index([user_id], map: "user_id")
