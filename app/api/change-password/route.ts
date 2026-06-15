@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     const hashed = await bcrypt.hash(new_password, 12);
     await prisma.users.update({
       where: { id: auth.session.id },
-      data: { password: hashed },
+      data: { 
+        password: hashed,
+        session_version: { increment: 1 }
+      },
     });
 
     return NextResponse.json({ success: true, message: "Password berhasil diubah" });

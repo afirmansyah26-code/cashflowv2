@@ -9,8 +9,8 @@ const JWT_SECRET: string = process.env.JWT_SECRET;
 export interface SessionPayload {
   id: number;
   role: string;
-  username: string;
-  full_name?: string;
+  session_version: number;
+  username?: string;
 }
 
 type AuthSuccess = { ok: true; session: SessionPayload };
@@ -46,10 +46,11 @@ export async function requireUser(): Promise<AuthResult> {
       id: true,
       username: true,
       role: true,
+      session_version: true,
     }
   });
 
-  if (!user) {
+  if (!user || user.session_version !== session.session_version) {
     return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 

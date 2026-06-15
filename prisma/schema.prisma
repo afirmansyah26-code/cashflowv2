@@ -50,9 +50,10 @@ model users {
   username     String         @unique(map: "username") @db.VarChar(100)
   role         users_role?    @default(admin)
   password     String?        @db.VarChar(255)
-  created_at   DateTime?      @default(now()) @db.Timestamp(0)
-  deleted_at   DateTime?      @db.Timestamp(0)
-  transactions transactions[]
+  created_at      DateTime?      @default(now()) @db.Timestamp(0)
+  deleted_at      DateTime?      @db.Timestamp(0)
+  session_version Int            @default(0)
+  transactions    transactions[]
 }
 
 model print_headers {

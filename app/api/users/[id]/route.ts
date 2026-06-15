@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
     }
 
-    const data: { username?: string; password?: string; role?: "admin" | "staf" } = {};
+    const data: { username?: string; password?: string; role?: "admin" | "staf"; session_version?: { increment: number } } = {};
 
     if (username && username !== existing.username) {
       const dup = await prisma.users.findUnique({ where: { username } });
@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (password) {
       if (password.length < 6) return NextResponse.json({ error: "Password minimal 6 karakter" }, { status: 400 });
       data.password = await bcrypt.hash(password, 12);
+      data.session_version = { increment: 1 };
     }
 
     if (role) {
