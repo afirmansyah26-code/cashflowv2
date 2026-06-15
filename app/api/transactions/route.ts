@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { adminTransactionSchema, transactionSchema, getTransactionsQuerySchema } from "@/lib/validations/transaction";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser();
@@ -97,6 +98,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const limitCheck = await rateLimit({
+    key: `tx_${auth.session.id}`,
+    limit: 100,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+  }
 
   try {
     let body;

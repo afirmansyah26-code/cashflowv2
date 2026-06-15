@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,18 @@ export async function POST(request: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json({ error: "Username dan password harus diisi" }, { status: 400 });
+    }
+
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+    const normalizedUsername = username.toLowerCase().trim();
+    const limitCheck = await rateLimit({
+      key: `login_${ip}_${normalizedUsername}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const user = await prisma.users.findUnique({

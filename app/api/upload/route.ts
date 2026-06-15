@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { writeFile, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -45,6 +46,16 @@ function isPathInside(parent: string, child: string): boolean {
 export async function POST(request: NextRequest) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const limitCheck = await rateLimit({
+    key: `upload_${auth.session.id}`,
+    limit: 30,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+  }
 
   try {
     const formData = await request.formData();

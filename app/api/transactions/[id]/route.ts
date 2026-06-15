@@ -2,11 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { adminUpdateTransactionSchema, transactionIdSchema } from "@/lib/validations/transaction";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
+  const limitCheck = await rateLimit({
+    key: `tx_${auth.session.id}`,
+    limit: 100,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+  }
   try {
     const { id } = await params;
     const idParsed = transactionIdSchema.safeParse(id);
@@ -76,6 +86,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
+
+  const limitCheck = await rateLimit({
+    key: `tx_${auth.session.id}`,
+    limit: 100,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
+  }
 
   try {
     const { id } = await params;
