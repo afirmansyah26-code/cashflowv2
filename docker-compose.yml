@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   cashflow:
-    # Anda bisa menggunakan image custom Anda "sisfonext-node:latest" atau node bawaan
+    # Anda bisa menggunakan image custom Anda "cashflownext-node:latest" atau node bawaan
     image: cashflownext-node:latest
     container_name: cashflow_next
     working_dir: /home/node/src
