@@ -1,7 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
+import { randomUUID } from "crypto";
 import path from "path";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const UPLOAD_CONFIG = {
+  bukti: {
+    directory: ["bukti"],
+    publicBasePath: "/uploads/bukti",
+  },
+  logo: {
+    directory: [],
+    publicBasePath: "/uploads",
+  },
+} as const;
+
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "application/pdf": ".pdf",
+};
+
+type UploadType = keyof typeof UPLOAD_CONFIG;
+
+function isUploadType(value: string): value is UploadType {
+  return Object.prototype.hasOwnProperty.call(UPLOAD_CONFIG, value);
+}
+
+function isPathInside(parent: string, child: string): boolean {
+  const relativePath = path.relative(parent, child);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith(`..${path.sep}`) &&
+      relativePath !== ".." &&
+      !path.isAbsolute(relativePath))
+  );
+}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -9,43 +46,51 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const uploadType = formData.get("type") as string || "bukti"; // bukti | logo
+    const fileValue = formData.get("file");
+    const uploadTypeValue = formData.get("type");
 
-    if (!file) {
+    if (!(fileValue instanceof File)) {
       return NextResponse.json({ error: "File harus diunggah" }, { status: 400 });
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
+    if (typeof uploadTypeValue !== "string" || !isUploadType(uploadTypeValue)) {
+      return NextResponse.json(
+        { error: "Tipe upload tidak valid. Gunakan 'bukti' atau 'logo'." },
+        { status: 400 }
+      );
+    }
+
+    if (fileValue.size === 0) {
+      return NextResponse.json({ error: "File yang diunggah kosong" }, { status: 400 });
+    }
+
+    if (fileValue.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: "Ukuran file maksimal 5MB" }, { status: 400 });
     }
 
-    // Validate MIME type
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(file.type)) {
+    const extension = EXTENSION_BY_MIME_TYPE[fileValue.type];
+    if (!extension) {
       return NextResponse.json({ error: "Format file tidak didukung. Gunakan JPG, PNG, WEBP, atau PDF" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
+    const uploadType = uploadTypeValue;
+    const uploadConfig = UPLOAD_CONFIG[uploadType];
+    const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
+    const uploadDir = path.resolve(uploadsRoot, ...uploadConfig.directory);
+    const uniqueName = `${randomUUID()}${extension}`;
+    const filePath = path.resolve(uploadDir, uniqueName);
+
+    if (!isPathInside(uploadsRoot, uploadDir) || !isPathInside(uploadDir, filePath)) {
+      return NextResponse.json({ error: "Lokasi upload tidak valid" }, { status: 400 });
+    }
+
+    const bytes = await fileValue.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate unique filename
-    const ext = path.extname(file.name) || `.${file.type.split("/")[1]}`;
-    const uniqueName = `${uploadType}_${Date.now()}${ext}`;
-
-    const uploadDir = uploadType === "logo"
-      ? path.join(process.cwd(), "public", "uploads")
-      : path.join(process.cwd(), "public", "uploads", "bukti");
-
     await mkdir(uploadDir, { recursive: true });
-
-    const filePath = path.join(uploadDir, uniqueName);
     await writeFile(filePath, buffer);
 
-    const publicPath = uploadType === "logo"
-      ? `/uploads/${uniqueName}`
-      : `/uploads/bukti/${uniqueName}`;
+    const publicPath = `${uploadConfig.publicBasePath}/${uniqueName}`;
 
     return NextResponse.json({ success: true, filename: uniqueName, path: publicPath });
   } catch (error) {
