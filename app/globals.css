@@ -327,7 +327,10 @@ tbody tr:hover { background: var(--bg-tertiary); }
 }
 
 @media (max-width: 480px) {
-  .card-grid { grid-template-columns: 1fr; }
+  .card-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .card-grid .stat-card { padding: 12px; }
+  .card-grid .stat-value { font-size: 15px; }
+  .card-grid .stat-label { font-size: 10px; margin-bottom: 4px; }
   .stat-value { font-size: 18px; }
   .main-content { padding: 10px; }
   .card { padding: 14px; }
