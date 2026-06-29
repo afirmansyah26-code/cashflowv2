@@ -1,15 +1,12 @@
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
+import DynamicMeta from "@/components/dynamic-meta";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
-  console.log("========== generateMetadata() ==========");
-
   try {
-    console.log("Connecting to database...");
-
     const org = await prisma.organization_profile.findFirst({
       select: {
         app_name: true,
@@ -18,29 +15,20 @@ export async function generateMetadata(): Promise<Metadata> {
       },
     });
 
-    console.log("Organization profile:", org);
-
-    const appName = org?.app_name || "Aplikasi Keuangan";
-    const subtitle = org?.subtitle || "Sistem manajemen keuangan";
+    const appName = org?.app_name ?? "Aplikasi Keuangan";
+    const subtitle = org?.subtitle ?? "Sistem manajemen keuangan";
 
     let logoUrl: string | undefined;
 
     if (org?.logo_path) {
-      console.log("Original logo_path:", org.logo_path);
-
       if (org.logo_path.startsWith("/")) {
         logoUrl = org.logo_path;
       } else {
-        logoUrl = `/uploads/${org.logo_path.replace(
-          "storage/public/uploads/",
-          ""
-        )}`;
+        logoUrl = `/uploads/${org.logo_path
+          .replace("storage/public/", "")
+          .replace("public/uploads/", "")}`;
       }
-
-      console.log("Resolved logo URL:", logoUrl);
     }
-
-    console.log("Metadata generated successfully.");
 
     return {
       title: `${appName} - ${subtitle}`,
@@ -48,16 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
       icons: logoUrl ? { icon: logoUrl } : undefined,
     };
   } catch (error) {
-    console.error("====================================");
-    console.error("generateMetadata() FAILED");
-    console.error(error);
-
-    if (error instanceof Error) {
-      console.error("Message :", error.message);
-      console.error("Stack   :", error.stack);
-    }
-
-    console.error("====================================");
+    console.error("generateMetadata() failed:", error);
 
     return {
       title: "Aplikasi Keuangan",
@@ -81,8 +60,13 @@ export default function RootLayout({
       </head>
 
       <body>
+        {/* Sinkronisasi title & favicon setelah aplikasi berjalan */}
+        <DynamicMeta />
+
         <ThemeProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
