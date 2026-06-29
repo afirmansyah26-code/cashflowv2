@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -25,7 +23,5 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 503 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
