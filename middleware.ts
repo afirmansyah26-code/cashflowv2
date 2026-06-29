@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const publicPaths = ["/login", "/api/login", "/api/logout", "/api/app-meta"];
+const publicPaths = ["/login", "/api/login", "/api/logout", "/api/app-meta", "/api/health"];
 
 function buildRedirect(path: string, request: NextRequest): URL {
   const url = new URL(path, request.url);
@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
 
   // Allow public paths and static assets
   if (
-    publicPaths.some((p) => pathname.startsWith(p)) ||
+    publicPaths.some((p) => pathname.startsWith(p + "/")) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/images") ||
