@@ -20,3 +20,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - zima-net
+      - tunnel_net
+
+networks:
+  zima-net:
+    external: true
+  tunnel_net:
+    external: true
+
