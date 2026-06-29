@@ -133,7 +133,7 @@ export default function TransaksiPage(){
         </div>
         <p className="form-help">Format: JPG, PNG, WEBP, PDF. Maks 5MB.</p>
         {file&&file.type.startsWith("image/")&&<div className="upload-preview"><img src={URL.createObjectURL(file)} alt="Preview"/></div>}
-        {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/api/files/${encodeURIComponent(form.attachment)}`} alt="Bukti" className="upload-existing-thumb"/></div>}
+        {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/api/files/private/bukti/${encodeURIComponent(form.attachment)}`} alt="Bukti" className="upload-existing-thumb"/></div>}
       </div>
       {role === "admin" && (
         <div className="form-group"><label className="form-label">Admin Notes</label><textarea className="form-textarea" rows={2} value={form.admin_notes} onChange={e=>setForm({...form,admin_notes:e.target.value})} placeholder="Catatan internal"/><p className="form-help">Hanya tampil di halaman transaksi, tidak di laporan.</p></div>
@@ -179,7 +179,7 @@ export default function TransaksiPage(){
                   <td className={`text-amount ${t.type==="income"?"text-income":"text-expense"}`} style={{textAlign:"right",padding:isMobile?"6px 4px":undefined}}>{isMobile?formatRupiahShort(t.amount):formatRupiah(t.amount)}</td>
                   <td style={{color:"var(--text-secondary)",padding:isMobile?"6px 4px":undefined}}>{t.note||"-"}</td>
                   {!isMobile&&<td style={{color:"var(--text-muted)"}}>{t.admin_notes||"-"}</td>}
-                  {!isMobile&&<td style={{textAlign:"center"}}>{t.attachment?<button className="bukti-thumb" onClick={()=>setLightbox(`/api/files/${encodeURIComponent(t.attachment!)}`)} title="Klik untuk memperbesar"><img src={`/api/files/${encodeURIComponent(t.attachment)}`} alt="Bukti" /></button>:<span className="text-muted">-</span>}</td>}
+                  {!isMobile&&<td style={{textAlign:"center"}}>{t.attachment?<button className="bukti-thumb" onClick={()=>setLightbox(`/api/files/private/bukti/${encodeURIComponent(t.attachment!)}`)} title="Klik untuk memperbesar"><img src={`/api/files/private/bukti/${encodeURIComponent(t.attachment)}`} alt="Bukti" /></button>:<span className="text-muted">-</span>}</td>}
                   <td style={{whiteSpace:"nowrap",padding:isMobile?"6px 2px":undefined}}><button className="btn btn-sm btn-secondary btn-icon" onClick={()=>openEdit(t)} title="Edit"><Pencil size={14}/></button>{" "}<button className="btn btn-sm btn-danger btn-icon" onClick={()=>{setDeleteTx(t);setShowDelete(true);}} title="Hapus"><Trash2 size={14}/></button></td>
                 </tr>
               ))}

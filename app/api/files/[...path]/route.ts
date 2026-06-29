@@ -23,6 +23,18 @@ function isPathInside(parent: string, child: string): boolean {
   );
 }
 
+function normalizeLegacyPath(pathArray: string[]): string[] {
+  const isLegacyFilename =
+    pathArray.length === 1 &&
+    /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pathArray[0]);
+
+  if (!isLegacyFilename) {
+    return pathArray;
+  }
+
+  return ["private", "bukti", pathArray[0]];
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ path: string[] }> }
@@ -33,8 +45,10 @@ export async function GET(
     return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
   }
 
-  const isPublic = pathArray[0] === "public";
-  const isPrivate = pathArray[0] === "private";
+  const normalizedPath = normalizeLegacyPath(pathArray);
+
+  const isPublic = normalizedPath[0] === "public";
+  const isPrivate = normalizedPath[0] === "private";
 
   if (!isPublic && !isPrivate) {
     return NextResponse.json({ error: "Akses file ditolak" }, { status: 403 });
@@ -46,7 +60,7 @@ export async function GET(
     if (!auth.ok) return auth.response;
   }
 
-  const filename = pathArray[pathArray.length - 1];
+  const filename = normalizedPath[normalizedPath.length - 1];
   const extension = path.extname(filename).toLowerCase();
 
   if (
@@ -60,7 +74,7 @@ export async function GET(
   }
 
   const baseDirectory = path.resolve(process.cwd(), "storage");
-  const filePath = path.resolve(baseDirectory, ...pathArray);
+  const filePath = path.resolve(baseDirectory, ...normalizedPath);
 
   if (!isPathInside(baseDirectory, filePath)) {
     return NextResponse.json({ error: "Akses file ditolak" }, { status: 403 });
