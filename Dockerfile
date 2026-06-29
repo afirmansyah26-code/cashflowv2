@@ -6,12 +6,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-FROM base AS prod-deps
-RUN apk add --no-cache libc6-compat openssl
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
-
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -39,10 +33,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copy full production node_modules to guarantee all binaries and dependencies work natively
-COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-# Overwrite the empty @prisma/client in prod-deps with the properly generated client from builder
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# Copy complete node_modules from builder (including all dependencies and Prisma CLI) to guarantee reliability
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

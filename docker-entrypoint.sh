@@ -11,13 +11,21 @@ mkdir -p storage/public/kop-surat || true
 mkdir -p storage/public/assets || true
 
 echo "2. Running database migrations..."
+SAFE_DB_URL=$(echo "$DATABASE_URL" | sed -E 's/:\/\/[^@]+@/:\/\/***@/')
+echo "Target Database: $SAFE_DB_URL"
+
+if [ ! -x ./node_modules/.bin/prisma ]; then
+    echo "Fatal: Prisma CLI is missing from runtime image."
+    exit 1
+fi
+
 max_retries=30
 counter=0
 success=false
 
 while [ $counter -lt $max_retries ]; do
     set +e
-    output=$(npx prisma migrate deploy 2>&1)
+    output=$(./node_modules/.bin/prisma migrate deploy 2>&1)
     exit_code=$?
     set -e
 
