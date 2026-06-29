@@ -3,9 +3,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
-const JWT_SECRET: string = process.env.JWT_SECRET;
-
 export interface SessionPayload {
   id: number;
   role: string;
@@ -16,6 +13,14 @@ export interface SessionPayload {
 type AuthSuccess = { ok: true; session: SessionPayload };
 type AuthFailure = { ok: false; response: NextResponse };
 type AuthResult = AuthSuccess | AuthFailure;
+
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required");
+  }
+  return secret;
+}
 
 /** Require specific roles. Returns session on success, or a ready-to-return error response. */
 export async function requireRole(...roles: string[]): Promise<AuthResult> {
@@ -74,12 +79,12 @@ export async function requireAdmin(): Promise<AuthResult> {
 }
 
 export function signToken(payload: SessionPayload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "1d" });
 }
 
 export function verifyToken(token: string): SessionPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as unknown as SessionPayload;
+    return jwt.verify(token, getJwtSecret()) as unknown as SessionPayload;
   } catch {
     return null;
   }
