@@ -47,3 +47,4 @@ next-env.d.ts
 /storage/private/bukti/*
 !/storage/private/bukti/.gitkeep
 /public/uploads/bukti/
+/ZIMAOS_DEPLOYMENT.md

@@ -5,7 +5,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
-const UPLOAD_DIR = "public/uploads/kop-surat";
+const UPLOAD_DIR = "storage/public/kop-surat";
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 const MAX_SIZE = 2 * 1024 * 1024;
 
