@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { requireUser } from "@/lib/auth";
+import fs from "fs";
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -9,6 +10,7 @@ const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".pdf": "application/pdf",
+  ".gif": "image/gif",
 };
 
 function isPathInside(parent: string, child: string): boolean {
@@ -23,12 +25,28 @@ function isPathInside(parent: string, child: string): boolean {
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ filename: string }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const auth = await requireUser();
-  if (!auth.ok) return auth.response;
+  const { path: pathArray } = await params;
+  
+  if (!pathArray || pathArray.length === 0) {
+    return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
+  }
 
-  const { filename } = await params;
+  const isPublic = pathArray[0] === "public";
+  const isPrivate = pathArray[0] === "private";
+
+  if (!isPublic && !isPrivate) {
+    return NextResponse.json({ error: "Akses file ditolak" }, { status: 403 });
+  }
+
+  // Enforce authentication for private files
+  if (isPrivate) {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+  }
+
+  const filename = pathArray[pathArray.length - 1];
   const extension = path.extname(filename).toLowerCase();
 
   if (
@@ -41,31 +59,30 @@ export async function GET(
     return NextResponse.json({ error: "Nama file tidak valid" }, { status: 400 });
   }
 
-  const privateDirectory = path.resolve(process.cwd(), "storage", "private", "bukti");
-  const filePath = path.resolve(privateDirectory, filename);
+  const baseDirectory = path.resolve(process.cwd(), "storage");
+  const filePath = path.resolve(baseDirectory, ...pathArray);
 
-  if (!isPathInside(privateDirectory, filePath)) {
+  if (!isPathInside(baseDirectory, filePath)) {
     return NextResponse.json({ error: "Akses file ditolak" }, { status: 403 });
   }
 
   try {
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
+    }
+    
     const buffer = await readFile(filePath);
 
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": MIME_TYPES[extension],
         "Content-Disposition": `inline; filename="${filename}"`,
-        "Cache-Control": "private, no-store",
+        "Cache-Control": isPublic ? "public, max-age=31536000, immutable" : "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
-    }
-
-    console.error("Private file read error:", error);
+    console.error("File read error:", error);
     return NextResponse.json({ error: "Gagal membaca file" }, { status: 500 });
   }
 }

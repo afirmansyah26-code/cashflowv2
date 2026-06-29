@@ -1,38 +1,32 @@
-version: "3.8"
+version: '3.8'
 
 services:
   cashflow:
-    # Anda bisa menggunakan image custom Anda "cashflownext-node:latest" atau node bawaan
-    image: cashflownext-node:latest
-    container_name: cashflow_next
-    working_dir: /home/node/src
-    labels:
-      com.webstation.type: "nodejs"
-
-    environment:
-      - NODE_ENV=production
-      - PORT=6000
-    
-    env_file:
-      - .env
-
-    volumes:
-      # Ubah "/volume1/web/cashflow-next" sesuai dengan folder tempat Anda menaruh project ini di NAS
-      - /volume1/web/cashflow-next:/home/node/src
-      # Mount socket MariaDB NAS (Bawaan package MariaDB Synology)
-      - /run/mysqld:/run/mysqld
-
-    ports:
-      - "6000:6000"
-
-    # Perintah untuk menjalankan Next.js
-    command: npm start
-
-    networks:
-      - synotunnel
-
+    build: .
+    container_name: cashflow_zimaos
     restart: unless-stopped
+    ports:
+      - "6090:6090"
+    volumes:
+      - ./storage:/app/storage
+      - ./.env:/app/.env
+    environment:
+      - COOKIE_SECURE=false
+      - NODE_ENV=production
+      - TZ=Asia/Jakarta
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - zima-net
+      - tunnel_net
 
 networks:
-  synotunnel:
+  zima-net:
     external: true
+  tunnel_net:
+    external: true
+

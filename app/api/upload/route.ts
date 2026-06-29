@@ -8,16 +8,16 @@ import { detectFileType, validateFileSize } from "@/lib/file-validation";
 
 
 const PRIVATE_EVIDENCE_DIRECTORY = path.resolve(process.cwd(), "storage", "private", "bukti");
-const PUBLIC_LOGO_DIRECTORY = path.resolve(process.cwd(), "public", "uploads");
+const PUBLIC_LOGO_DIRECTORY = path.resolve(process.cwd(), "storage", "public", "assets");
 
 const UPLOAD_CONFIG = {
   bukti: {
     directory: PRIVATE_EVIDENCE_DIRECTORY,
-    responseBasePath: "/api/files",
+    responseBasePath: "/api/files/private/bukti",
   },
   logo: {
     directory: PUBLIC_LOGO_DIRECTORY,
-    responseBasePath: "/uploads",
+    responseBasePath: "/uploads/assets",
   },
 } as const;
 
