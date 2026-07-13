@@ -18,16 +18,19 @@ export async function GET(request: NextRequest) {
       deleted_at: null,
     };
 
-    // Date filters
+    // Date filters — use ISO date strings so they parse as UTC midnight,
+    // avoiding local-timezone offset that drops the last day of the month.
     if (month && year) {
       const m = parseInt(month);
       const y = parseInt(year);
-      const startDate = new Date(y, m - 1, 1);
-      const endDate = new Date(y, m, 0); // last day of month
+      const mm = String(m).padStart(2, "0");
+      const lastDay = new Date(y, m, 0).getDate();
+      const startDate = new Date(`${y}-${mm}-01`);
+      const endDate = new Date(`${y}-${mm}-${String(lastDay).padStart(2, "0")}`);
       where.transaction_date = { gte: startDate, lte: endDate };
     } else if (year) {
       const y = parseInt(year);
-      where.transaction_date = { gte: new Date(y, 0, 1), lte: new Date(y, 11, 31) };
+      where.transaction_date = { gte: new Date(`${y}-01-01`), lte: new Date(`${y}-12-31`) };
     }
 
     if (filterType === "income" || filterType === "expense") {
