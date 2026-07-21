@@ -11,6 +11,14 @@ function formatRupiah(n:number){return "Rp "+n.toLocaleString("id-ID");}
 function formatRupiahShort(n:number){if(n>=1000000)return(n/1000000).toFixed(n%1000000===0?0:1)+"M";if(n>=1000)return(n/1000).toFixed(n%1000===0?0:0)+"K";return String(n);}
 function formatNum(v:string){return v.replace(/\D/g,"").replace(/\B(?=(\d{3})+(?!\d))/g,".");}
 function parseNum(v:string){return parseInt(v.replace(/\./g,""),10)||0;}
+function formatDateInputValue(value:Date|string = new Date()){
+  const date=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(date.getTime()))return "";
+  const year=date.getFullYear();
+  const month=String(date.getMonth()+1).padStart(2,"0");
+  const day=String(date.getDate()).padStart(2,"0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function TransaksiPage(){
   const{showToast}=useToast();
@@ -29,7 +37,7 @@ export default function TransaksiPage(){
   const[editTx,setEditTx]=useState<Transaction|null>(null);
   const[deleteTx,setDeleteTx]=useState<Transaction|null>(null);
   const[saving,setSaving]=useState(false);
-  const[form,setForm]=useState({category_id:"",type:"income",amount:"",transaction_date:new Date().toISOString().split("T")[0],note:"",admin_notes:"",attachment:""});
+  const[form,setForm]=useState({category_id:"",type:"income",amount:"",transaction_date:formatDateInputValue(),note:"",admin_notes:"",attachment:""});
   const[file,setFile]=useState<File|null>(null);
   const[role,setRole]=useState("");
   const[isMobile,setIsMobile]=useState(false);
@@ -106,11 +114,11 @@ export default function TransaksiPage(){
     }catch{showToast("error","Terjadi kesalahan");}finally{setSaving(false);}
   };
 
-  const resetForm=()=>{setForm({category_id:"",type:"income",amount:"",transaction_date:new Date().toISOString().split("T")[0],note:"",admin_notes:"",attachment:""});setFile(null);setEditTx(null);};
+  const resetForm=()=>{setForm({category_id:"",type:"income",amount:"",transaction_date:formatDateInputValue(),note:"",admin_notes:"",attachment:""});setFile(null);setEditTx(null);};
 
   const openEdit=(t:Transaction)=>{
     setEditTx(t);
-    setForm({category_id:t.category_id?String(t.category_id):"",type:t.type,amount:formatNum(String(Math.round(t.amount))),transaction_date:new Date(t.transaction_date).toISOString().split("T")[0],note:t.note||"",admin_notes:t.admin_notes||"",attachment:t.attachment||""});
+    setForm({category_id:t.category_id?String(t.category_id):"",type:t.type,amount:formatNum(String(Math.round(t.amount))),transaction_date:formatDateInputValue(t.transaction_date),note:t.note||"",admin_notes:t.admin_notes||"",attachment:t.attachment||""});
     setFile(null);setShowEdit(true);
   };
 
