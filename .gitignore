@@ -43,8 +43,16 @@ next-env.d.ts
 
 /app/generated/prisma
 
-# Private transaction attachments
+# Runtime file storage (keep directory structure, ignore uploaded contents)
 /storage/private/bukti/*
 !/storage/private/bukti/.gitkeep
+/storage/private/attachments/*
+!/storage/private/attachments/.gitkeep
+/storage/private/documents/*
+!/storage/private/documents/.gitkeep
+/storage/public/assets/*
+!/storage/public/assets/.gitkeep
+/storage/public/kop-surat/*
+!/storage/public/kop-surat/.gitkeep
 /public/uploads/bukti/
 /ZIMAOS_DEPLOYMENT.md
