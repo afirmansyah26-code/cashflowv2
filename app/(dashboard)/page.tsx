@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight } from "lucide-react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend, Filler } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
+import { useTransactionModal } from "@/components/transaction/transaction-modal-provider";
+import { useMediaQuery } from "@/components/use-media-query";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend, Filler);
 
@@ -24,28 +26,20 @@ function formatShort(n: number) {
 }
 
 export default function DashboardPage() {
+  const { transactionRevision } = useTransactionModal();
   const [data, setData] = useState<DashboardData | null>(null);
   const [period, setPeriod] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMediaQuery("(max-width:768px)");
   const chartRef = useRef(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width:768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
     fetch(`/api/dashboard?period=${period}`)
       .then((r) => r.json())
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period, transactionRevision]);
 
   if (loading || !data) return <div className="empty-state"><div className="empty-state-icon">📊</div><p>Memuat dashboard...</p></div>;
 
@@ -74,7 +68,7 @@ export default function DashboardPage() {
         <h1 className="page-title">Dashboard</h1>
         <div style={{ display: "flex", gap: 4 }}>
           {["week","month","year","all"].map((p) => (
-            <button key={p} className={`btn btn-sm ${period===p?"btn-primary":"btn-secondary"}`} onClick={() => setPeriod(p)}>
+            <button key={p} className={`btn btn-sm ${period===p?"btn-primary":"btn-secondary"}`} onClick={() => { setLoading(true); setPeriod(p); }}>
               {p === "week" ? "Minggu" : p === "month" ? "Bulan" : p === "year" ? "Tahun" : "Semua"}
             </button>
           ))}

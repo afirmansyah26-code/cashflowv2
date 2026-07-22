@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Search, RefreshCcw, Trash2, X } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { useMediaQuery } from "@/components/use-media-query";
 
 interface Transaction { id:number; category_name:string; type:string; amount:number; transaction_date:string; note:string|null; admin_notes:string|null; username:string; deleted_at:string; deleted_by:string; }
 
@@ -23,20 +24,11 @@ export default function RecycleBinPage() {
   const [showPurge, setShowPurge] = useState(false);
   const [targetTx, setTargetTx] = useState<Transaction | null>(null);
   const [saving, setSaving] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMediaQuery("(max-width:768px)");
   const [authChecking, setAuthChecking] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width:768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
   const loadData = useCallback(() => {
-    setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     fetch(`/api/transactions/trash?${params}`)
       .then(r => r.json())

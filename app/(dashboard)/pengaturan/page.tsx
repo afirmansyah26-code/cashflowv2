@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Plus, Pencil, Trash2, Settings, Star, Printer, Eye, X } from "lucide-react";
+import { Save, Plus, Pencil, Trash2, Settings, Star, Printer, Eye, Keyboard } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import KeyboardShortcutList from "@/components/keyboard-shortcut-list";
 
 interface Category { id: number; name: string }
 interface User { id: number; username: string; role: string; created_at: string }
@@ -53,7 +54,7 @@ export default function PengaturanPage() {
   const [catName, setCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
 
-  const loadCats = () => { setCatsLoading(true); fetch("/api/categories").then(r => r.json()).then(d => setCats(d.categories || [])).finally(() => setCatsLoading(false)); };
+  const loadCats = () => { fetch("/api/categories").then(r => r.json()).then(d => setCats(d.categories || [])).finally(() => setCatsLoading(false)); };
   useEffect(() => { loadCats(); }, []);
 
   const handleCatSave = async (e: React.FormEvent) => {
@@ -85,7 +86,7 @@ export default function PengaturanPage() {
   const [userForm, setUserForm] = useState({ username: "", password: "", role: "staf" });
   const [userSaving, setUserSaving] = useState(false);
 
-  const loadUsers = () => { setUsersLoading(true); fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users || [])).finally(() => setUsersLoading(false)); };
+  const loadUsers = () => { fetch("/api/users").then(r => r.json()).then(d => setUsers(d.users || [])).finally(() => setUsersLoading(false)); };
   useEffect(() => { loadUsers(); }, []);
 
   const handleUserSave = async (e: React.FormEvent) => {
@@ -121,7 +122,7 @@ export default function PengaturanPage() {
   const [showKopDelete, setShowKopDelete] = useState<PrintHeader | null>(null);
   const [previewKop, setPreviewKop] = useState<PrintHeader | null>(null);
 
-  const loadKop = () => { setKopLoading(true); fetch("/api/kop-surat").then(r => r.json()).then(d => setKopList(d.headers || [])).finally(() => setKopLoading(false)); };
+  const loadKop = () => { fetch("/api/kop-surat").then(r => r.json()).then(d => setKopList(d.headers || [])).finally(() => setKopLoading(false)); };
   useEffect(() => { loadKop(); }, []);
 
   const openKopAdd = () => { setEditKopId(null); setKopForm(emptyKop); setKopLogoFile(null); setKopLogoPreview(null); setShowKopModal(true); };
@@ -180,9 +181,10 @@ export default function PengaturanPage() {
 
       {/* ── Tab: Umum ── */}
       {tab === "umum" && (
-        <div className="card" style={{ maxWidth: 640 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Pengaturan Umum</h3>
-          <form onSubmit={handleOrgSave}>
+        <div className="settings-general-grid">
+          <div className="card">
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Pengaturan Umum</h3>
+            <form onSubmit={handleOrgSave}>
             <div style={{ background: "var(--bg-tertiary)", padding: 16, borderRadius: "var(--radius-sm)", marginBottom: 20 }}>
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "var(--text-secondary)" }}>Aplikasi</h4>
               <div className="form-group"><label className="form-label">Nama Aplikasi</label><input className="form-input" value={orgForm.app_name} onChange={e => setOrgForm({ ...orgForm, app_name: e.target.value })} placeholder="Nama yang tampil di sidebar & login" /><p className="form-help">Ditampilkan di sidebar, halaman login, dan title browser.</p></div>
@@ -197,8 +199,18 @@ export default function PengaturanPage() {
               </div>
             </div>
 
-            <button className="btn btn-primary" disabled={orgSaving}><Save size={16} />{orgSaving ? "Menyimpan..." : "Simpan"}</button>
-          </form>
+              <button className="btn btn-primary" disabled={orgSaving}><Save size={16} />{orgSaving ? "Menyimpan..." : "Simpan"}</button>
+            </form>
+          </div>
+
+          <section className="card settings-shortcut-section" aria-labelledby="settings-shortcut-title">
+            <h4 id="settings-shortcut-title">
+              <Keyboard size={16} />
+              Keyboard Shortcuts
+            </h4>
+            <p>Gunakan pintasan berikut untuk bekerja lebih cepat di area dashboard.</p>
+            <KeyboardShortcutList />
+          </section>
         </div>
       )}
 

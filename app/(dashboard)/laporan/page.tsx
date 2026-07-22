@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Printer, Filter } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Printer } from "lucide-react";
+import { useTransactionModal } from "@/components/transaction/transaction-modal-provider";
+import { useMediaQuery } from "@/components/use-media-query";
 
 interface ReportTx { id: number; type: string; amount: number; transaction_date: string; category_name: string; note: string | null; }
 interface PrintHeader { id: number; name: string; institution_name: string; subtitle: string | null; address: string | null; phone: string | null; bank_info: string | null; notary_info: string | null; logo: string | null; signer_name: string | null; signer_title: string | null; signer_city: string | null; is_default: boolean; }
@@ -14,22 +16,15 @@ function formatRp(n: number) { return "Rp " + n.toLocaleString("id-ID"); }
 function formatShort(n: number) { if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + "M"; if (n >= 1000) return Math.round(n / 1000) + "K"; return String(n); }
 
 export default function LaporanPage() {
+  const { transactionRevision } = useTransactionModal();
   const [data, setData] = useState<ReportData | null>(null);
   const now = new Date();
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [year, setYear] = useState(String(now.getFullYear()));
   const [filterType, setFilterType] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [kopSurat, setKopSurat] = useState<PrintHeader | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width:768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  const isMobile = useMediaQuery("(max-width:768px)");
 
   useEffect(() => {
     fetch("/api/kop-surat").then(r => r.json()).then(d => {
@@ -39,15 +34,14 @@ export default function LaporanPage() {
     }).catch(() => {});
   }, []);
 
-  const load = () => {
-    setLoading(true);
+  const load = useCallback(() => {
     const p = new URLSearchParams({ year });
     if (month) p.set("month", month);
     if (filterType) p.set("filter_type", filterType);
     fetch(`/api/reports?${p}`).then(r => r.json()).then(setData).catch(console.error).finally(() => setLoading(false));
-  };
+  }, [filterType, month, year]);
 
-  useEffect(() => { load(); }, [month, year, filterType]);
+  useEffect(() => { load(); }, [load, transactionRevision]);
 
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);

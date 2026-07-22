@@ -1,13 +1,15 @@
 "use client";
 import { useSidebar } from "./sidebar-provider";
 import { useTheme } from "./theme-provider";
+import { useTransactionModal } from "./transaction/transaction-modal-provider";
 import { useRouter } from "next/navigation";
-import { Menu, Sun, Moon, LogOut, KeyRound, User } from "lucide-react";
+import { Menu, Sun, Moon, LogOut, KeyRound, User, Plus, CircleHelp } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 export default function Topbar() {
   const { toggle } = useSidebar();
   const { theme, toggleTheme } = useTheme();
+  const { openTransaction, openShortcutHelp } = useTransactionModal();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("");
@@ -48,6 +50,26 @@ export default function Topbar() {
       </div>
 
       <div className="topbar-right">
+        <button
+          type="button"
+          className="topbar-transaction-btn"
+          onClick={() => openTransaction()}
+          title="Tambah transaksi (Alt+N)"
+        >
+          <Plus size={16} />
+          <span className="topbar-transaction-label">Transaksi</span>
+        </button>
+
+        <button
+          type="button"
+          className="topbar-theme-btn topbar-help-btn"
+          onClick={openShortcutHelp}
+          title="Keyboard Shortcuts (?)"
+          aria-label="Buka keyboard shortcuts"
+        >
+          <CircleHelp size={18} />
+        </button>
+
         <button className="topbar-theme-btn" onClick={toggleTheme} title="Toggle theme">
           {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
         </button>

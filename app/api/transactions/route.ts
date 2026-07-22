@@ -20,18 +20,55 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: parsedQuery.error.issues[0].message || "Invalid query parameters" }, { status: 400 });
     }
 
-    const { page, limit, search, filter_type: filterType, filter_category: filterCategory, date_from: dateFrom, date_to: dateTo } = parsedQuery.data;
+    const {
+      page,
+      limit,
+      search,
+      filter_type: filterType,
+      filter_category: filterCategory,
+      date_from: dateFrom,
+      date_to: dateTo,
+      amount_min: amountMin,
+      amount_max: amountMax,
+      filter_user: filterUser,
+      sort,
+    } = parsedQuery.data;
+    const isAdmin = auth.session.role.toLowerCase() === "admin";
 
     const where: Prisma.transactionsWhereInput = {
       deleted_at: null,
     };
 
     if (search) {
-      where.OR = [
+      const searchConditions: Prisma.transactionsWhereInput[] = [
         { note: { contains: search } },
-        { admin_notes: { contains: search } },
         { categories: { name: { contains: search } } },
       ];
+
+      if (isAdmin) {
+        searchConditions.push(
+          { admin_notes: { contains: search } },
+          { users: { username: { contains: search } } },
+        );
+      }
+
+      const normalizedNumber = search
+        .trim()
+        .replace(/^rp\s*/i, "")
+        .replace(/[.\s]/g, "")
+        .replace(",", ".");
+
+      if (/^\d+(?:\.\d+)?$/.test(normalizedNumber)) {
+        const numericSearch = Number(normalizedNumber);
+        if (Number.isFinite(numericSearch) && numericSearch >= 0 && numericSearch <= 999999999999.99) {
+          searchConditions.push({ amount: numericSearch });
+          if (Number.isSafeInteger(numericSearch) && numericSearch > 0 && numericSearch <= 2147483647) {
+            searchConditions.push({ id: numericSearch });
+          }
+        }
+      }
+
+      where.OR = searchConditions;
     }
 
     if (filterType === "income" || filterType === "expense") {
@@ -50,6 +87,30 @@ export async function GET(request: NextRequest) {
       where.transaction_date = { ...(where.transaction_date as object || {}), lte: dateTo };
     }
 
+    if (amountMin !== undefined || amountMax !== undefined) {
+      where.amount = {
+        ...(amountMin !== undefined ? { gte: amountMin } : {}),
+        ...(amountMax !== undefined ? { lte: amountMax } : {}),
+      };
+    }
+
+    if (isAdmin && filterUser) {
+      where.user_id = filterUser;
+    }
+
+    const orderBy: Prisma.transactionsOrderByWithRelationInput[] = (() => {
+      switch (sort) {
+        case "date_asc":
+          return [{ transaction_date: "asc" }, { id: "asc" }];
+        case "amount_desc":
+          return [{ amount: "desc" }, { id: "desc" }];
+        case "amount_asc":
+          return [{ amount: "asc" }, { id: "asc" }];
+        default:
+          return [{ transaction_date: "desc" }, { id: "desc" }];
+      }
+    })();
+
     const [transactions, total] = await Promise.all([
       prisma.transactions.findMany({
         where,
@@ -57,7 +118,7 @@ export async function GET(request: NextRequest) {
           categories: { select: { id: true, name: true } },
           users: { select: { username: true } },
         },
-        orderBy: [{ transaction_date: "desc" }, { id: "desc" }],
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -80,7 +141,7 @@ export async function GET(request: NextRequest) {
           created_at: t.created_at,
           username: t.users?.username || "-",
         };
-        if (auth.session.role.toLowerCase() !== "admin") {
+        if (!isAdmin) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { admin_notes: _admin_notes, ...safeTransaction } = mapped;
           return safeTransaction;

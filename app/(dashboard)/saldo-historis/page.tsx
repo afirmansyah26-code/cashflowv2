@@ -3,8 +3,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { Filter, RotateCcw, Printer, TrendingUp, TrendingDown, Wallet, DollarSign } from "lucide-react";
+import { useTransactionModal } from "@/components/transaction/transaction-modal-provider";
+import { useMediaQuery } from "@/components/use-media-query";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
+
+const DEFAULT_TODAY = new Date().toISOString().split("T")[0];
+const DEFAULT_THIRTY_DAYS_AGO = new Date(new Date().getTime() - 30 * 86400000).toISOString().split("T")[0];
 
 interface BalanceData { date: string; daily_income: number; daily_expense: number; cumulative_balance: number; }
 interface Summary { saldoAwal: number; totalIncome: number; totalExpense: number; saldoAkhir: number; dateFrom: string; dateTo: string; }
@@ -21,23 +26,16 @@ function formatDate(d: string) {
 }
 
 export default function SaldoHistorisPage() {
+  const { transactionRevision } = useTransactionModal();
   const [data, setData] = useState<BalanceData[]>([]);
   const [summary, setSummary] = useState<Summary>({ saldoAwal: 0, totalIncome: 0, totalExpense: 0, saldoAkhir: 0, dateFrom: "", dateTo: "" });
   const [loading, setLoading] = useState(true);
   const [kopSurat, setKopSurat] = useState<PrintHeader | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width:768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  const isMobile = useMediaQuery("(max-width:768px)");
 
   // Default: last 30 days
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const today = DEFAULT_TODAY;
+  const thirtyDaysAgo = DEFAULT_THIRTY_DAYS_AGO;
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo);
   const [dateTo, setDateTo] = useState(today);
 
@@ -50,7 +48,6 @@ export default function SaldoHistorisPage() {
   }, []);
 
   const fetchData = useCallback(() => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
@@ -64,7 +61,7 @@ export default function SaldoHistorisPage() {
       .finally(() => setLoading(false));
   }, [dateFrom, dateTo]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData, transactionRevision]);
 
   const handleReset = () => {
     setDateFrom(thirtyDaysAgo);

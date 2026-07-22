@@ -1,279 +1,494 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Pencil, Trash2, X, Upload } from "lucide-react";
+
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Copy, Pencil, SearchX, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import AttachmentPreview from "@/components/attachment/attachment-preview";
+import TransactionModal from "@/components/transaction/transaction-modal";
+import { useTransactionModal } from "@/components/transaction/transaction-modal-provider";
+import TransactionFilterToolbar, {
+  getActiveFilterChips,
+  type TransactionFilterKey,
+  type TransactionFilterValues,
+  type TransactionSort,
+  type TransactionUserOption,
+} from "@/components/transaction/transaction-filter-toolbar";
+import type {
+  TransactionCategory,
+  TransactionRecord,
+} from "@/components/transaction/types";
+import { useMediaQuery } from "@/components/use-media-query";
 
-interface Transaction { id:number; user_id:number; category_id:number|null; category_name:string; type:string; amount:number; transaction_date:string; note:string|null; admin_notes:string|null; attachment:string|null; username:string; }
-interface Category { id:number; name:string; }
-
-function formatRupiah(n:number){return "Rp "+n.toLocaleString("id-ID");}
-function formatRupiahShort(n:number){if(n>=1000000)return(n/1000000).toFixed(n%1000000===0?0:1)+"M";if(n>=1000)return(n/1000).toFixed(n%1000===0?0:0)+"K";return String(n);}
-function formatNum(v:string){return v.replace(/\D/g,"").replace(/\B(?=(\d{3})+(?!\d))/g,".");}
-function parseNum(v:string){return parseInt(v.replace(/\./g,""),10)||0;}
-function formatDateInputValue(value:Date|string = new Date()){
-  const date=value instanceof Date?value:new Date(value);
-  if(Number.isNaN(date.getTime()))return "";
-  const year=date.getFullYear();
-  const month=String(date.getMonth()+1).padStart(2,"0");
-  const day=String(date.getDate()).padStart(2,"0");
-  return `${year}-${month}-${day}`;
+interface TransactionsResponse {
+  transactions?: TransactionRecord[];
+  total?: number;
+  totalPages?: number;
+  error?: string;
 }
 
-export default function TransaksiPage(){
-  const{showToast}=useToast();
-  const[txns,setTxns]=useState<Transaction[]>([]);
-  const[cats,setCats]=useState<Category[]>([]);
-  const[total,setTotal]=useState(0);
-  const[page,setPage]=useState(1);
-  const[limit,setLimit]=useState(25);
-  const[totalPages,setTotalPages]=useState(1);
-  const[search,setSearch]=useState("");
-  const[filterType,setFilterType]=useState("");
-  const[loading,setLoading]=useState(true);
-  const[showAdd,setShowAdd]=useState(false);
-  const[showEdit,setShowEdit]=useState(false);
-  const[showDelete,setShowDelete]=useState(false);
-  const[editTx,setEditTx]=useState<Transaction|null>(null);
-  const[deleteTx,setDeleteTx]=useState<Transaction|null>(null);
-  const[saving,setSaving]=useState(false);
-  const[form,setForm]=useState({category_id:"",type:"income",amount:"",transaction_date:formatDateInputValue(),note:"",admin_notes:"",attachment:""});
-  const[file,setFile]=useState<File|null>(null);
-  const[role,setRole]=useState("");
-  const[isMobile,setIsMobile]=useState(false);
-  const[lightbox,setLightbox]=useState<string|null>(null);
+function formatRupiah(value: number) {
+  return `Rp ${value.toLocaleString("id-ID")}`;
+}
 
-  useEffect(()=>{
-    fetch("/api/me").then(r=>r.json()).then(d=>{if(d.role)setRole(d.role);}).catch(()=>{});
-    const mq=window.matchMedia("(max-width:768px)");
-    setIsMobile(mq.matches);
-    const handler=(e:MediaQueryListEvent)=>setIsMobile(e.matches);
-    mq.addEventListener("change",handler);
-    return()=>mq.removeEventListener("change",handler);
-  },[]);
+function formatRupiahShort(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K`;
+  return String(value);
+}
 
-  const loadData=useCallback(()=>{
-    setLoading(true);
-    const params=new URLSearchParams({page:String(page),limit:String(limit)});
-    if(search)params.set("search",search);
-    if(filterType)params.set("filter_type",filterType);
-    Promise.all([
-      fetch(`/api/transactions?${params}`).then(r=>r.json()),
-      fetch("/api/categories").then(r=>r.json()),
-    ]).then(([td,cd])=>{
-      setTxns(td.transactions||[]);setTotal(td.total||0);setTotalPages(td.totalPages||1);
-      setCats(cd.categories||[]);
-    }).catch(()=>showToast("error","Gagal memuat data")).finally(()=>setLoading(false));
-  },[page,limit,search,filterType,showToast]);
-
-  useEffect(()=>{loadData();},[loadData]);
-
-  const uploadFile=async():Promise<string>=>{
-    if(!file)return form.attachment;
-    const fd=new FormData();fd.append("file",file);fd.append("type","bukti");
-    const r=await fetch("/api/upload",{method:"POST",body:fd});
-    const d=await r.json();
-    if(!d.success)throw new Error(d.error);
-    return d.filename;
-  };
-
-  const handleAdd=async(e:React.FormEvent)=>{
-    e.preventDefault();setSaving(true);
-    try{
-      const attachment=await uploadFile();
-      const payload={...form,amount:parseNum(form.amount),attachment} as any;
-      if(role!=="admin") delete payload.admin_notes;
-      const r=await fetch("/api/transactions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      const d=await r.json();
-      if(d.success){showToast("success","Transaksi berhasil ditambahkan");setShowAdd(false);resetForm();loadData();}
-      else showToast("error",d.error||"Gagal menyimpan");
-    }catch(err){showToast("error",String(err));}finally{setSaving(false);}
-  };
-
-  const handleEdit=async(e:React.FormEvent)=>{
-    e.preventDefault();if(!editTx)return;setSaving(true);
-    try{
-      let attachment=form.attachment;
-      if(file)attachment=await uploadFile();
-      const payload={...form,amount:parseNum(form.amount),attachment} as any;
-      if(role!=="admin") delete payload.admin_notes;
-      const r=await fetch(`/api/transactions/${editTx.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      const d=await r.json();
-      if(d.success){showToast("success","Transaksi berhasil diperbarui");setShowEdit(false);resetForm();loadData();}
-      else showToast("error",d.error||"Gagal memperbarui");
-    }catch(err){showToast("error",String(err));}finally{setSaving(false);}
-  };
-
-  const handleDelete=async()=>{
-    if(!deleteTx)return;setSaving(true);
-    try{
-      const r=await fetch(`/api/transactions/${deleteTx.id}`,{method:"DELETE"});
-      const d=await r.json();
-      if(d.success){showToast("success","Transaksi berhasil dihapus");setShowDelete(false);setDeleteTx(null);loadData();}
-      else showToast("error",d.error||"Gagal menghapus");
-    }catch{showToast("error","Terjadi kesalahan");}finally{setSaving(false);}
-  };
-
-  const resetForm=()=>{setForm({category_id:"",type:"income",amount:"",transaction_date:formatDateInputValue(),note:"",admin_notes:"",attachment:""});setFile(null);setEditTx(null);};
-
-  const openEdit=(t:Transaction)=>{
-    setEditTx(t);
-    setForm({category_id:t.category_id?String(t.category_id):"",type:t.type,amount:formatNum(String(Math.round(t.amount))),transaction_date:formatDateInputValue(t.transaction_date),note:t.note||"",admin_notes:t.admin_notes||"",attachment:t.attachment||""});
-    setFile(null);setShowEdit(true);
-  };
-
-  const formFields=(
-    <>
-      <div className="form-group"><label className="form-label">Kategori</label><select className="form-select" value={form.category_id} onChange={e=>setForm({...form,category_id:e.target.value})}><option value="">-- Pilih Kategori --</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-      <div className="form-row">
-        <div className="form-group"><label className="form-label">Jenis</label><select className="form-select" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select></div>
-        <div className="form-group"><label className="form-label">Jumlah</label><input className="form-input" value={form.amount} onChange={e=>setForm({...form,amount:formatNum(e.target.value)})} placeholder="contoh: 1.000.000" required/></div>
-      </div>
-      <div className="form-group"><label className="form-label">Tanggal</label><input className="form-input" type="date" value={form.transaction_date} onChange={e=>setForm({...form,transaction_date:e.target.value})} required/></div>
-      <div className="form-group"><label className="form-label">Catatan</label><textarea className="form-textarea" rows={2} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
-      <div className="form-group"><label className="form-label">Bukti Transaksi</label>
-        <input id="fileInput" type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)} style={{display:"none"}}/>
-        <div style={{display:"flex",alignItems:"center",gap:12,border:"1px solid var(--border-color)",borderRadius:"var(--radius-sm)",padding:6,background:"var(--bg-secondary)"}}>
-          <button type="button" onClick={()=>document.getElementById("fileInput")?.click()} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 18px",background:"var(--accent)",color:"#fff",border:"none",borderRadius:"var(--radius-sm)",cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0}}>
-            <Upload size={14}/> Pilih File
-          </button>
-          <span style={{fontSize:13,color:"var(--text-muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file ? file.name : "Tidak ada file dipilih"}</span>
-        </div>
-        <p className="form-help">Format: JPG, PNG, WEBP, PDF. Maks 5MB.</p>
-        {file&&file.type.startsWith("image/")&&<div className="upload-preview"><img src={URL.createObjectURL(file)} alt="Preview"/></div>}
-        {form.attachment&&!file&&<div className="upload-existing"><span className="form-help">File saat ini:</span><img src={`/api/files/private/bukti/${encodeURIComponent(form.attachment)}`} alt="Bukti" className="upload-existing-thumb"/></div>}
-      </div>
-      {role === "admin" && (
-        <div className="form-group"><label className="form-label">Admin Notes</label><textarea className="form-textarea" rows={2} value={form.admin_notes} onChange={e=>setForm({...form,admin_notes:e.target.value})} placeholder="Catatan internal"/><p className="form-help">Hanya tampil di halaman transaksi, tidak di laporan.</p></div>
-      )}
-    </>
+function formatTransactionDate(value: string, isMobile: boolean) {
+  const dateOnly = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (!dateOnly) return "-";
+  return new Date(`${dateOnly}T00:00:00.000Z`).toLocaleDateString(
+    "id-ID",
+    isMobile
+      ? { day: "2-digit", month: "2-digit", timeZone: "UTC" }
+      : { timeZone: "UTC" },
   );
+}
 
-  return(
+function positiveInteger(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function positiveIntegerString(value: string | null) {
+  if (!value || !/^\d+$/.test(value) || Number(value) < 1) return "";
+  return value;
+}
+
+function amountString(value: string | null) {
+  if (!value || !/^\d+(?:\.\d{1,2})?$/.test(value)) return "";
+  if (Number(value) > 999999999999.99) return "";
+  return value;
+}
+
+function dateString(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) return "";
+  return value;
+}
+
+function TransactionPageContent() {
+  const { showToast } = useToast();
+  const { openTransaction, transactionRevision, notifyTransactionChanged } = useTransactionModal();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
+  const isMobile = useMediaQuery("(max-width:768px)");
+
+  const urlState = useMemo(() => {
+    const params = new URLSearchParams(queryString);
+    const rawType = params.get("type");
+    const rawPreset = params.get("preset");
+    const rawSort = params.get("sort");
+    const limitValue = positiveInteger(params.get("limit"), 25);
+
+    return {
+      search: (params.get("q") || "").slice(0, 100),
+      filters: {
+        type: rawType === "income" || rawType === "expense" ? rawType : "",
+        category: positiveIntegerString(params.get("category")),
+        preset: ["today", "this_week", "this_month", "last_month", "this_year"].includes(rawPreset || "")
+          ? rawPreset as TransactionFilterValues["preset"]
+          : "",
+        start: dateString(params.get("start")),
+        end: dateString(params.get("end")),
+        min: amountString(params.get("min")),
+        max: amountString(params.get("max")),
+        user: positiveIntegerString(params.get("user")),
+      } satisfies TransactionFilterValues,
+      page: positiveInteger(params.get("page"), 1),
+      limit: [10, 25, 50, 100].includes(limitValue) ? limitValue : 25,
+      sort: ["date_desc", "date_asc", "amount_desc", "amount_asc"].includes(rawSort || "")
+        ? rawSort as TransactionSort
+        : "date_desc" as TransactionSort,
+    };
+  }, [queryString]);
+
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
+  const [users, setUsers] = useState<TransactionUserOption[]>([]);
+  const [role, setRole] = useState("");
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [editTransaction, setEditTransaction] = useState<TransactionRecord | null>(null);
+  const [deleteTransaction, setDeleteTransaction] = useState<TransactionRecord | null>(null);
+  const [saving, setSaving] = useState(false);
+  const isAdmin = role.toLowerCase() === "admin";
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    Promise.all([
+      fetch("/api/categories", { signal: controller.signal }).then((response) => response.json()),
+      fetch("/api/me", { signal: controller.signal }).then((response) => response.json()),
+    ])
+      .then(async ([categoryData, userData]) => {
+        setCategories(categoryData.categories || []);
+        setRole(userData.role || "");
+
+        if (String(userData.role).toLowerCase() === "admin") {
+          const response = await fetch("/api/users", { signal: controller.signal });
+          const data = await response.json();
+          setUsers(data.users || []);
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        showToast("error", "Gagal memuat pilihan filter");
+      });
+
+    return () => controller.abort();
+  }, [showToast]);
+
+  const apiQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      page: String(urlState.page),
+      limit: String(urlState.limit),
+    });
+    if (urlState.search) params.set("search", urlState.search);
+    if (urlState.filters.type) params.set("filter_type", urlState.filters.type);
+    if (urlState.filters.category) params.set("filter_category", urlState.filters.category);
+    if (urlState.filters.start) params.set("date_from", urlState.filters.start);
+    if (urlState.filters.end) params.set("date_to", urlState.filters.end);
+    if (urlState.filters.min) params.set("amount_min", urlState.filters.min);
+    if (urlState.filters.max) params.set("amount_max", urlState.filters.max);
+    if (isAdmin && urlState.filters.user) params.set("filter_user", urlState.filters.user);
+    if (urlState.sort !== "date_desc") params.set("sort", urlState.sort);
+    return params.toString();
+  }, [isAdmin, urlState]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    const loadTransactions = async () => {
+      await Promise.resolve();
+      if (active) setRefreshing(true);
+
+      try {
+        const response = await fetch(`/api/transactions?${apiQuery}`, { signal: controller.signal });
+        const data = await response.json() as TransactionsResponse;
+        if (!response.ok) throw new Error(data.error || "Gagal memuat transaksi");
+        if (!active) return;
+        setTransactions(data.transactions || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+        setHasLoaded(true);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (active) showToast("error", error instanceof Error ? error.message : "Gagal memuat transaksi");
+      } finally {
+        if (active) setRefreshing(false);
+      }
+    };
+
+    void loadTransactions();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [apiQuery, showToast, transactionRevision]);
+
+  const replaceQuery = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(queryString);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [pathname, queryString, router]);
+
+  const applyFilters = (filters: TransactionFilterValues) => {
+    replaceQuery({
+      type: filters.type || null,
+      category: filters.category || null,
+      preset: filters.preset || null,
+      start: filters.start || null,
+      end: filters.end || null,
+      min: filters.min || null,
+      max: filters.max || null,
+      user: isAdmin ? filters.user || null : null,
+      page: null,
+    });
+  };
+
+  const removeFilter = (key: TransactionFilterKey) => {
+    const updates: Record<string, string | null> = { page: null };
+    if (key === "date") {
+      updates.preset = null;
+      updates.start = null;
+      updates.end = null;
+    } else updates[key] = null;
+    replaceQuery(updates);
+  };
+
+  const resetFilters = () => {
+    replaceQuery({
+      q: null,
+      type: null,
+      category: null,
+      preset: null,
+      start: null,
+      end: null,
+      min: null,
+      max: null,
+      user: null,
+      page: null,
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTransaction) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/transactions/${deleteTransaction.id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (data.success) {
+        showToast("success", "Transaksi berhasil dihapus");
+        setShowDelete(false);
+        setDeleteTransaction(null);
+        notifyTransactionChanged();
+      } else {
+        showToast("error", data.error || "Gagal menghapus");
+      }
+    } catch {
+      showToast("error", "Terjadi kesalahan");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hasActiveQuery = Boolean(urlState.search || Object.values(urlState.filters).some(Boolean));
+  const visibleFilters = isAdmin ? urlState.filters : { ...urlState.filters, user: "" };
+  const activeFilterChips = getActiveFilterChips({
+    filters: visibleFilters,
+    categories,
+    users,
+    isAdmin,
+  });
+  const resultSummary = total > transactions.length
+    ? `Menampilkan ${transactions.length} dari ${total} transaksi`
+    : `${total} transaksi ditemukan`;
+  const toolbarKey = [
+    ...Object.values(urlState.filters),
+    isAdmin ? "admin" : "staff",
+  ].join("|");
+
+  return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Daftar Transaksi</h1>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <div className="search-box"><Search size={16}/><input className="form-input" placeholder="Cari catatan, kategori..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} style={{paddingLeft:36}}/></div>
-          <select className="form-select" style={{width:100}} value={limit} onChange={e=>{setLimit(Number(e.target.value));setPage(1);}}>{[10,25,50,100].map(l=><option key={l} value={l}>{l} baris</option>)}</select>
-          <select className="form-select" style={{width:130}} value={filterType} onChange={e=>{setFilterType(e.target.value);setPage(1);}}><option value="">Semua Jenis</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select>
-          <button className="btn btn-success" onClick={()=>{resetForm();setShowAdd(true);}}><Plus size={16}/>Tambah</button>
-        </div>
       </div>
 
-      {search&&<div style={{background:"var(--info-light)",padding:"8px 14px",borderRadius:"var(--radius-sm)",marginBottom:12,fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>Menampilkan <strong>{total}</strong> hasil untuk &quot;<strong>{search}</strong>&quot;</span><button className="btn btn-sm btn-secondary" onClick={()=>setSearch("")}><X size={14}/>Hapus</button></div>}
+      <TransactionFilterToolbar
+        key={toolbarKey}
+        search={urlState.search}
+        filters={urlState.filters}
+        categories={categories}
+        users={users}
+        isAdmin={isAdmin}
+        sort={urlState.sort}
+        limit={urlState.limit}
+        refreshing={refreshing && hasLoaded}
+        onSearchChange={(value) => replaceQuery({ q: value || null, page: null })}
+        onApplyFilters={applyFilters}
+        onRemoveFilter={removeFilter}
+        onReset={resetFilters}
+        onSortChange={(sort) => replaceQuery({ sort: sort === "date_desc" ? null : sort, page: null })}
+        onLimitChange={(limit) => replaceQuery({ limit: limit === 25 ? null : String(limit), page: null })}
+      />
 
-      <div className="card">
-        <div className="table-wrap">
+      <div className="card" aria-busy={refreshing}>
+        {hasLoaded && <div className="transaction-result-summary">{resultSummary}</div>}
+        <div className={`table-wrap ${refreshing && hasLoaded ? "transaction-table-refreshing" : ""}`}>
           <table>
-            <thead><tr>
-              <th style={{width:isMobile?55:85,padding:isMobile?"6px 4px":undefined}}>Tanggal</th>
-              {!isMobile&&<th style={{width:60}}>Jenis</th>}
-              <th style={{padding:isMobile?"6px 4px":undefined}}>Kategori</th>
-              <th style={{textAlign:"right",width:isMobile?60:100,padding:isMobile?"6px 4px":undefined}}>Jumlah</th>
-              <th style={{padding:isMobile?"6px 4px":undefined}}>Catatan</th>
-              {!isMobile&&<th>Admin Notes</th>}
-              {!isMobile&&<th style={{width:50}}>Bukti</th>}
-              <th style={{width:isMobile?55:80,padding:isMobile?"6px 4px":undefined}}>Aksi</th>
-            </tr></thead>
+            <thead>
+              <tr>
+                <th style={{ width: isMobile ? 55 : 85, padding: isMobile ? "6px 4px" : undefined }}>Tanggal</th>
+                {!isMobile && <th style={{ width: 60 }}>Jenis</th>}
+                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Kategori</th>
+                <th style={{ textAlign: "right", width: isMobile ? 60 : 100, padding: isMobile ? "6px 4px" : undefined }}>Jumlah</th>
+                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Catatan</th>
+                {!isMobile && <th>Admin Notes</th>}
+                {!isMobile && <th style={{ width: 50 }}>Bukti</th>}
+                <th style={{ width: isMobile ? 108 : 116, padding: isMobile ? "6px 4px" : undefined }}>Aksi</th>
+              </tr>
+            </thead>
             <tbody>
-              {loading?<tr><td colSpan={isMobile?5:8} style={{textAlign:"center",padding:32}}>Memuat...</td></tr>:
-               txns.length===0?<tr><td colSpan={isMobile?5:8} className="text-muted" style={{textAlign:"center",padding:32}}>Tidak ada transaksi.</td></tr>:
-               txns.map(t=>(
-                <tr key={t.id}>
-                  <td style={{whiteSpace:"nowrap",padding:isMobile?"6px 4px":undefined}}>{isMobile?new Date(t.transaction_date).toLocaleDateString("id-ID",{day:"2-digit",month:"2-digit"}):new Date(t.transaction_date).toLocaleDateString("id-ID")}</td>
-                  {!isMobile&&<td><span className={`badge ${t.type==="income"?"badge-income":"badge-expense"}`}>{t.type==="income"?"Masuk":"Keluar"}</span></td>}
-                  <td style={{padding:isMobile?"6px 4px":undefined}}>{isMobile&&<span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",marginRight:4,verticalAlign:"middle",background:t.type==="income"?"var(--success)":"var(--danger)"}}></span>}{t.category_name}</td>
-                  <td className={`text-amount ${t.type==="income"?"text-income":"text-expense"}`} style={{textAlign:"right",padding:isMobile?"6px 4px":undefined}}>{isMobile?formatRupiahShort(t.amount):formatRupiah(t.amount)}</td>
-                  <td style={{color:"var(--text-secondary)",padding:isMobile?"6px 4px":undefined}}>{t.note||"-"}</td>
-                  {!isMobile&&<td style={{color:"var(--text-muted)"}}>{t.admin_notes||"-"}</td>}
-                  {!isMobile&&<td style={{textAlign:"center"}}>{t.attachment?<button className="bukti-thumb" onClick={()=>setLightbox(`/api/files/private/bukti/${encodeURIComponent(t.attachment!)}`)} title="Klik untuk memperbesar"><img src={`/api/files/private/bukti/${encodeURIComponent(t.attachment)}`} alt="Bukti" /></button>:<span className="text-muted">-</span>}</td>}
-                  <td style={{whiteSpace:"nowrap",padding:isMobile?"6px 2px":undefined}}><button className="btn btn-sm btn-secondary btn-icon" onClick={()=>openEdit(t)} title="Edit"><Pencil size={14}/></button>{" "}<button className="btn btn-sm btn-danger btn-icon" onClick={()=>{setDeleteTx(t);setShowDelete(true);}} title="Hapus"><Trash2 size={14}/></button></td>
+              {!hasLoaded ? (
+                <tr><td colSpan={isMobile ? 5 : 8} style={{ textAlign: "center", padding: 32 }}>Memuat...</td></tr>
+              ) : transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={isMobile ? 5 : 8}>
+                    <div className="transaction-empty-filter">
+                      <SearchX size={42} />
+                      <strong>{hasActiveQuery ? "Tidak ada transaksi yang sesuai dengan filter." : "Belum ada transaksi."}</strong>
+                      {hasActiveQuery && (
+                        <div className="transaction-empty-active-filters" aria-label="Filter aktif yang tidak menghasilkan transaksi">
+                          <span>Filter aktif:</span>
+                          {urlState.search && <span className="transaction-filter-chip">Pencarian: {urlState.search}</span>}
+                          {activeFilterChips.map((chip) => (
+                            <span className="transaction-filter-chip" key={chip.key}>{chip.label}</span>
+                          ))}
+                        </div>
+                      )}
+                      {hasActiveQuery && (
+                        <button type="button" className="btn btn-secondary" onClick={resetFilters}>
+                          Reset Filter
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : transactions.map((transaction) => (
+                <tr key={transaction.id}>
+                  <td style={{ whiteSpace: "nowrap", padding: isMobile ? "6px 4px" : undefined }}>
+                    {formatTransactionDate(transaction.transaction_date, isMobile)}
+                  </td>
+                  {!isMobile && (
+                    <td><span className={`badge ${transaction.type === "income" ? "badge-income" : "badge-expense"}`}>{transaction.type === "income" ? "Masuk" : "Keluar"}</span></td>
+                  )}
+                  <td style={{ padding: isMobile ? "6px 4px" : undefined }}>
+                    {isMobile && <span className={`badge-dot ${transaction.type === "income" ? "badge-dot-income" : "badge-dot-expense"}`} />}
+                    {transaction.category_name}
+                  </td>
+                  <td className={`text-amount ${transaction.type === "income" ? "text-income" : "text-expense"}`} style={{ textAlign: "right", padding: isMobile ? "6px 4px" : undefined }}>
+                    {isMobile ? formatRupiahShort(transaction.amount) : formatRupiah(transaction.amount)}
+                  </td>
+                  <td style={{ color: "var(--text-secondary)", padding: isMobile ? "6px 4px" : undefined }}>{transaction.note || "-"}</td>
+                  {!isMobile && <td style={{ color: "var(--text-muted)" }}>{transaction.admin_notes || "-"}</td>}
+                  {!isMobile && (
+                    <td style={{ textAlign: "center" }}>
+                      {transaction.attachment ? (
+                        <AttachmentPreview
+                          mode="existing"
+                          url={`/api/files/private/bukti/${encodeURIComponent(transaction.attachment)}`}
+                          fileName={transaction.attachment}
+                          compact
+                        />
+                      ) : <span className="text-muted">-</span>}
+                    </td>
+                  )}
+                  <td style={{ whiteSpace: "nowrap", padding: isMobile ? "6px 2px" : undefined }}>
+                    <div className="transaction-row-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary btn-icon"
+                      onClick={() => openTransaction({ mode: "duplicate", transaction })}
+                      title="Duplicate Transaction"
+                      aria-label={`Duplicate Transaction #${transaction.id}`}
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary btn-icon"
+                      onClick={() => {
+                        setEditTransaction(transaction);
+                        setShowEdit(true);
+                      }}
+                      title="Edit"
+                      aria-label={`Edit transaksi #${transaction.id}`}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger btn-icon"
+                      onClick={() => {
+                        setDeleteTransaction(transaction);
+                        setShowDelete(true);
+                      }}
+                      title="Hapus"
+                      aria-label={`Hapus transaksi #${transaction.id}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {totalPages>1&&<div className="pagination"><button className="page-btn" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>«</button>{Array.from({length:Math.min(7,totalPages)},(_,i)=>{const s=Math.max(1,page-3);const p=s+i;if(p>totalPages)return null;return<button key={p} className={`page-btn ${p===page?"page-btn-active":""}`} onClick={()=>setPage(p)}>{p}</button>;})}<button className="page-btn" disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)}>»</button></div>}
-        <div className="text-muted" style={{textAlign:"center",marginTop:8}}>Total: {total} transaksi</div>
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button type="button" className="page-btn" disabled={urlState.page <= 1} onClick={() => replaceQuery({ page: String(urlState.page - 1) })}>«</button>
+            {Array.from({ length: Math.min(7, totalPages) }, (_, index) => {
+              const startPage = Math.max(1, Math.min(urlState.page - 3, totalPages - 6));
+              const pageNumber = startPage + index;
+              if (pageNumber > totalPages) return null;
+              return (
+                <button
+                  type="button"
+                  key={pageNumber}
+                  className={`page-btn ${pageNumber === urlState.page ? "page-btn-active" : ""}`}
+                  onClick={() => replaceQuery({ page: pageNumber === 1 ? null : String(pageNumber) })}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+            <button type="button" className="page-btn" disabled={urlState.page >= totalPages} onClick={() => replaceQuery({ page: String(urlState.page + 1) })}>»</button>
+          </div>
+        )}
       </div>
 
-      {/* Add Modal */}
-      <Modal isOpen={showAdd} onClose={()=>setShowAdd(false)} title="Tambah Transaksi" size="lg" footer={<><button className="btn btn-secondary" onClick={()=>setShowAdd(false)}>Batal</button><button className="btn btn-primary" onClick={()=>(document.getElementById("addForm") as HTMLFormElement)?.requestSubmit()} disabled={saving}>{saving?"Menyimpan...":"Simpan"}</button></>}>
-        <form id="addForm" onSubmit={handleAdd}>{formFields}</form>
+      <TransactionModal
+        isOpen={showEdit}
+        mode="edit"
+        onClose={() => {
+          setShowEdit(false);
+          setEditTransaction(null);
+        }}
+        onSaved={notifyTransactionChanged}
+        transaction={editTransaction}
+      />
+
+      <Modal
+        isOpen={showDelete}
+        onClose={() => setShowDelete(false)}
+        title="Konfirmasi Hapus"
+        size="sm"
+        footer={(
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowDelete(false)}>Batal</button>
+            <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={saving}>{saving ? "Menghapus..." : "Hapus"}</button>
+          </>
+        )}
+      >
+        <div style={{ textAlign: "center", padding: "16px 0" }}>
+          <Trash2 size={48} color="var(--danger)" style={{ marginBottom: 12 }} />
+          <p style={{ fontSize: 16, fontWeight: 600 }}>Yakin ingin menghapus transaksi ini?</p>
+          <p className="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
       </Modal>
 
-      {/* Edit Modal */}
-      <Modal isOpen={showEdit} onClose={()=>setShowEdit(false)} title="Edit Transaksi" size="lg" footer={<><button className="btn btn-secondary" onClick={()=>setShowEdit(false)}>Batal</button><button className="btn btn-primary" onClick={()=>(document.getElementById("editForm") as HTMLFormElement)?.requestSubmit()} disabled={saving}>{saving?"Menyimpan...":"Simpan Perubahan"}</button></>}>
-        <form id="editForm" onSubmit={handleEdit}>{formFields}</form>
-      </Modal>
-
-      {/* Delete Confirm */}
-      <Modal isOpen={showDelete} onClose={()=>setShowDelete(false)} title="Konfirmasi Hapus" size="sm" footer={<><button className="btn btn-secondary" onClick={()=>setShowDelete(false)}>Batal</button><button className="btn btn-danger" onClick={handleDelete} disabled={saving}>{saving?"Menghapus...":"Hapus"}</button></>}>
-        <div style={{textAlign:"center",padding:"16px 0"}}><Trash2 size={48} color="var(--danger)" style={{marginBottom:12}}/><p style={{fontSize:16,fontWeight:600}}>Yakin ingin menghapus transaksi ini?</p><p className="text-muted">Tindakan ini tidak dapat dibatalkan.</p></div>
-      </Modal>
-
-      {/* Lightbox */}
-      {lightbox&&<div className="lightbox-overlay" onClick={()=>setLightbox(null)}>
-        <button className="lightbox-close" onClick={()=>setLightbox(null)}><X size={24}/></button>
-        <img src={lightbox} alt="Bukti" className="lightbox-img" onClick={e=>e.stopPropagation()} />
-      </div>}
-
-      <style jsx>{`
-        .bukti-thumb {
-          background: none; border: none; cursor: pointer; padding: 0;
-          border-radius: var(--radius-sm); overflow: hidden;
-          display: inline-block; width: 36px; height: 36px;
-          border: 1px solid var(--border-color);
-          transition: transform .2s ease, box-shadow .2s ease;
-        }
-        .bukti-thumb:hover {
-          transform: scale(1.5);
-          box-shadow: 0 4px 16px rgba(0,0,0,.25);
-          z-index: 10; position: relative;
-        }
-        .bukti-thumb img {
-          width: 100%; height: 100%; object-fit: cover; display: block;
-        }
-        .lightbox-overlay {
-          position: fixed; inset: 0; z-index: 9999;
-          background: rgba(0,0,0,.85); display: flex;
-          align-items: center; justify-content: center;
-          cursor: pointer; animation: fadeIn .2s;
-        }
-        .lightbox-close {
-          position: absolute; top: 16px; right: 16px;
-          background: rgba(255,255,255,.15); border: none;
-          color: #fff; cursor: pointer; border-radius: 50%;
-          width: 40px; height: 40px; display: flex;
-          align-items: center; justify-content: center;
-          transition: background .2s;
-        }
-        .lightbox-close:hover { background: rgba(255,255,255,.3); }
-        .lightbox-img {
-          max-width: 90vw; max-height: 85vh;
-          object-fit: contain; border-radius: 8px;
-          cursor: default; animation: zoomIn .2s;
-        }
-        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-        @keyframes zoomIn { from{transform:scale(.8);opacity:0} to{transform:scale(1);opacity:1} }
-
-        .upload-preview {
-          margin-top: 8px; border-radius: var(--radius-sm); overflow: hidden;
-          border: 1px solid var(--border-color); max-width: 160px;
-        }
-        .upload-preview img {
-          display: block; width: 100%; height: auto; object-fit: contain;
-        }
-        .upload-existing {
-          margin-top: 8px; display: flex; align-items: center; gap: 8px;
-        }
-        .upload-existing-thumb {
-          width: 48px; height: 48px; object-fit: cover;
-          border-radius: var(--radius-sm);
-          border: 1px solid var(--border-color);
-        }
-      `}</style>
     </div>
+  );
+}
+
+export default function TransaksiPage() {
+  return (
+    <Suspense fallback={<div className="empty-state"><p>Memuat transaksi...</p></div>}>
+      <TransactionPageContent />
+    </Suspense>
   );
 }

@@ -17,7 +17,7 @@ export default function PenggunaPage(){
   const[form,setForm]=useState({username:"",password:"",role:"staf"});
   const[saving,setSaving]=useState(false);
 
-  const load=()=>{setLoading(true);fetch("/api/users").then(r=>r.json()).then(d=>setUsers(d.users||[])).finally(()=>setLoading(false));};
+  const load=()=>{fetch("/api/users").then(r=>r.json()).then(d=>setUsers(d.users||[])).finally(()=>setLoading(false));};
   useEffect(()=>{load();},[]);
 
   const handleSave=async(e:React.FormEvent)=>{

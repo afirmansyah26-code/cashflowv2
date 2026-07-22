@@ -9,9 +9,10 @@ interface ModalProps {
   children: ReactNode;
   size?: "sm" | "md" | "lg";
   footer?: ReactNode;
+  headerBadge?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children, size = "md", footer }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = "md", footer, headerBadge }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,8 +44,11 @@ export default function Modal({ isOpen, onClose, title, children, size = "md", f
     >
       <div className="modal-content" style={{ maxWidth: widths[size] }}>
         <div className="modal-header">
-          <h3 className="modal-title">{title}</h3>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+          <div className="modal-title-group">
+            <h3 className="modal-title">{title}</h3>
+            {headerBadge && <span className="modal-header-badge">{headerBadge}</span>}
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={`Tutup ${title}`}><X size={18} /></button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}

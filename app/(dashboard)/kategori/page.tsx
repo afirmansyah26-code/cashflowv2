@@ -17,7 +17,7 @@ export default function KategoriPage(){
   const[name,setName]=useState("");
   const[saving,setSaving]=useState(false);
 
-  const load=()=>{setLoading(true);fetch("/api/categories").then(r=>r.json()).then(d=>setCats(d.categories||[])).finally(()=>setLoading(false));};
+  const load=()=>{fetch("/api/categories").then(r=>r.json()).then(d=>setCats(d.categories||[])).finally(()=>setLoading(false));};
   useEffect(()=>{load();},[]);
 
   const handleSave=async(e:React.FormEvent)=>{

@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, ReactNode } from "react";
 
 type Theme = "light" | "dark";
 
@@ -11,26 +11,42 @@ const ThemeContext = createContext<{
   toggleTheme: () => {},
 });
 
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
+function getSavedTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  const saved = localStorage.getItem("theme");
+  return saved === "dark" ? "dark" : "light";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const mounted = useSyncExternalStore(subscribeToClientMount, getClientSnapshot, getServerSnapshot);
+  const [theme, setTheme] = useState<Theme>(getSavedTheme);
+  const visibleTheme = mounted ? theme : "light";
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") as Theme;
-    if (saved) {
-      setTheme(saved);
-      document.documentElement.setAttribute("data-theme", saved);
-    }
-  }, []);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
+    const next = visibleTheme === "light" ? "dark" : "light";
     setTheme(next);
     localStorage.setItem("theme", next);
     document.documentElement.setAttribute("data-theme", next);
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: visibleTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

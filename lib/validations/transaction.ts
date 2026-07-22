@@ -12,6 +12,20 @@ export const dateSchema = z.preprocess(
   })
 );
 
+const queryDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus menggunakan format YYYY-MM-DD")
+  .refine((value) => {
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year
+      && parsed.getUTCMonth() === month - 1
+      && parsed.getUTCDate() === day;
+  }, "Tanggal tidak valid")
+  // Prisma represents MariaDB DATE as Date, so normalize the date-only value
+  // to UTC midnight. No local timezone offset may enter the database query.
+  .transform((value) => new Date(`${value}T00:00:00.000Z`));
+
 export const transactionSchema = z.object({
   type: z.enum(['income', 'expense'], {
     message: "Tipe transaksi tidak valid",
@@ -49,8 +63,12 @@ export const getTransactionsQuerySchema = z.object({
   search: z.string().max(100, "Pencarian terlalu panjang").catch(""),
   filter_type: z.enum(['income', 'expense', '']).catch(""),
   filter_category: z.coerce.number().int().positive().catch(0),
-  date_from: dateSchema.optional().catch(undefined),
-  date_to: dateSchema.optional().catch(undefined),
+  date_from: queryDateSchema.optional().catch(undefined),
+  date_to: queryDateSchema.optional().catch(undefined),
+  amount_min: z.coerce.number().finite().nonnegative().max(999999999999.99).optional().catch(undefined),
+  amount_max: z.coerce.number().finite().nonnegative().max(999999999999.99).optional().catch(undefined),
+  filter_user: z.coerce.number().int().positive().catch(0),
+  sort: z.enum(['date_desc', 'date_asc', 'amount_desc', 'amount_asc']).catch('date_desc'),
 }).strict();
 
 export const transactionIdSchema = z.coerce
