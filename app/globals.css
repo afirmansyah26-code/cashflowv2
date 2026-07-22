@@ -145,6 +145,83 @@ tbody tr:hover { background: var(--bg-tertiary); }
 .toast-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; }
 @keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
+/* Floating calculator */
+.floating-calculator-root { position: relative; z-index: 2500; }
+.floating-calculator-launcher {
+  position: fixed; right: 20px; bottom: 20px; z-index: 2500;
+  width: 54px; height: 54px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; background: var(--accent); color: #fff;
+  box-shadow: 0 10px 28px rgba(79,70,229,.32); cursor: pointer;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.floating-calculator-launcher:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 14px 32px rgba(79,70,229,.38); }
+.floating-calculator-panel {
+  position: fixed; z-index: 2500; width: min(312px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px); overflow-x: hidden; overflow-y: auto;
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(15,23,42,.28);
+  animation: calculatorOpen .16s ease-out;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.floating-calculator-panel-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent),
+    0 0 28px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 20px 50px rgba(15,23,42,.3);
+}
+.floating-calculator-header {
+  min-height: 48px; padding: 8px 10px 8px 14px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-color); cursor: grab; touch-action: none; user-select: none;
+}
+.floating-calculator-header:active { cursor: grabbing; }
+.floating-calculator-title { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.floating-calculator-title svg { color: var(--text-muted); }
+.floating-calculator-keyboard-status {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px;
+  border: 1px solid var(--border-color); border-radius: 99px;
+  background: var(--bg-tertiary); color: var(--text-muted);
+  font-size: 9px; font-weight: 700; line-height: 1.2; letter-spacing: .2px;
+}
+.floating-calculator-keyboard-status::before {
+  content: ''; display: block; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--text-muted);
+}
+.floating-calculator-keyboard-status-active {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-light); color: var(--accent);
+}
+.floating-calculator-keyboard-status-active::before { background: var(--accent); box-shadow: 0 0 7px var(--accent); }
+.floating-calculator-actions { display: flex; gap: 2px; }
+.floating-calculator-actions button {
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.floating-calculator-actions button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.floating-calculator-display { padding: 14px 16px 10px; text-align: right; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); }
+.floating-calculator-expression { min-height: 20px; color: var(--text-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floating-calculator-display output {
+  display: block; min-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-primary); font-size: 30px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums;
+}
+.floating-calculator-keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; }
+.calculator-key {
+  min-width: 0; min-height: 48px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-color); border-radius: 9px; background: var(--bg-primary); color: var(--text-primary);
+  font: 600 17px/1 'Inter', system-ui, sans-serif; cursor: pointer; user-select: none;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
+}
+.calculator-key:hover { background: var(--bg-tertiary); border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color)); }
+.calculator-key:active { transform: scale(.96); }
+.calculator-key-muted { color: var(--text-secondary); background: var(--bg-tertiary); }
+.calculator-key-operator { color: var(--accent); background: var(--accent-light); border-color: transparent; font-size: 21px; }
+.calculator-key-operator:hover, .calculator-key-active { color: #fff; background: var(--accent); border-color: var(--accent); }
+.calculator-key-equals { color: #fff; background: var(--accent); border-color: var(--accent); font-size: 21px; }
+.calculator-key-equals:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.floating-calculator-launcher:focus-visible,
+.floating-calculator-actions button:focus-visible,
+.calculator-key:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+@keyframes calculatorOpen { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
 /* Pagination */
 .pagination { display: flex; gap: 4px; align-items: center; justify-content: center; margin-top: 16px; }
 .page-btn { min-width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
@@ -324,6 +401,15 @@ tbody tr:hover { background: var(--bg-tertiary); }
   tbody td { padding: 6px 4px; }
   .modal-content { max-width: 100%; }
   .modal-body { padding: 16px; }
+  .floating-calculator-launcher { right: 12px; bottom: 12px; width: 52px; height: 52px; }
+  .floating-calculator-panel { width: min(300px, calc(100vw - 24px)); }
+}
+
+@media (max-height: 560px) {
+  .floating-calculator-display { padding-top: 8px; padding-bottom: 6px; }
+  .floating-calculator-display output { min-height: 36px; font-size: 25px; }
+  .floating-calculator-keypad { gap: 6px; padding: 8px; }
+  .calculator-key { min-height: 40px; }
 }
 
 @media (max-width: 480px) {

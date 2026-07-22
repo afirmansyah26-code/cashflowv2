@@ -1,6 +1,7 @@
 import { SidebarProvider } from "@/components/sidebar-provider";
 import Sidebar from "@/components/sidebar";
 import Topbar from "@/components/topbar";
+import FloatingCalculator from "@/components/floating-calculator";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+      <FloatingCalculator />
     </SidebarProvider>
   );
 }
