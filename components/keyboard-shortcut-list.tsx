@@ -1,5 +1,6 @@
 const shortcuts = [
   { keys: ["Alt", "N"], description: "Tambah Transaksi" },
+  { keys: ["Alt", "K"], description: "Buka/Tutup Kalkulator" },
   { keys: ["Ctrl", "S"], description: "Simpan" },
   { keys: ["Esc"], description: "Tutup Modal" },
 ];

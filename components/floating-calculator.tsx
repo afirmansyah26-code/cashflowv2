@@ -332,6 +332,32 @@ export default function FloatingCalculator() {
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    const handleCalculatorShortcut = (event: KeyboardEvent) => {
+      const isAltK = event.altKey
+        && !event.ctrlKey
+        && !event.metaKey
+        && !event.shiftKey
+        && event.code === "KeyK";
+
+      if (!isAltK || event.repeat) return;
+
+      event.preventDefault();
+      if (isOpen) {
+        keyboardActiveRef.current = false;
+        setIsKeyboardActive(false);
+        setIsOpen(false);
+      } else {
+        keyboardActiveRef.current = true;
+        setIsKeyboardActive(true);
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleCalculatorShortcut);
+    return () => window.removeEventListener("keydown", handleCalculatorShortcut);
+  }, [isOpen]);
+
   const handleFocusOutside = (event: ReactFocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       deactivateKeyboard();
@@ -425,7 +451,7 @@ export default function FloatingCalculator() {
               <button type="button" onClick={resetPosition} aria-label="Kembalikan posisi kalkulator" title="Kembalikan posisi">
                 <RotateCcw size={15} />
               </button>
-              <button type="button" onClick={closeCalculator} aria-label="Tutup kalkulator" title="Tutup">
+              <button type="button" onClick={closeCalculator} aria-label="Tutup kalkulator" title="Tutup (Alt+K)">
                 <X size={17} />
               </button>
             </div>
@@ -463,7 +489,7 @@ export default function FloatingCalculator() {
           className="floating-calculator-launcher"
           onClick={openCalculator}
           aria-label="Buka kalkulator"
-          title="Buka kalkulator"
+          title="Buka kalkulator (Alt+K)"
         >
           <Calculator size={24} />
         </button>
