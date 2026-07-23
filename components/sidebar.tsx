@@ -3,8 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./sidebar-provider";
 import {
-  LayoutDashboard, ArrowLeftRight, FileText, TrendingUp,
-  Settings, X, Trash2
+  LayoutDashboard, ArrowLeftRight, ChevronDown, Database, FileText, TrendingUp,
+  LayoutTemplate, Settings, X, Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -21,7 +21,11 @@ const navItems: NavItem[] = [
   { href: "/laporan", label: "Laporan", icon: <FileText size={20} /> },
   { href: "/saldo-historis", label: "Saldo Historis", icon: <TrendingUp size={20} /> },
   { href: "/pengaturan", label: "Pengaturan", icon: <Settings size={20} />, adminOnly: true },
-  { href: "/pengaturan/recycle-bin", label: "Recycle Bin", icon: <Trash2 size={20} />, adminOnly: true },
+  { href: "/pengaturan/recycle-bin", label: "Recycle Bin", icon: <Trash2 size={20} /> },
+];
+
+const masterDataItems: NavItem[] = [
+  { href: "/template-transaksi", label: "Template Transaksi", icon: <LayoutTemplate size={18} /> },
 ];
 
 export default function Sidebar() {
@@ -32,6 +36,7 @@ export default function Sidebar() {
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [roleLoaded, setRoleLoaded] = useState(false);
+  const [masterDataOpen, setMasterDataOpen] = useState(() => pathname.startsWith("/template-transaksi"));
 
   useEffect(() => {
 
@@ -77,11 +82,52 @@ export default function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          {filteredItems.map((item) => {
+          {filteredItems.slice(0, 4).map((item) => {
             const isActive = item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
 
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link ${isActive ? "sidebar-link-active" : ""}`}
+                onClick={close}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                <span className="sidebar-link-text">{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            className={`sidebar-link sidebar-group-toggle ${pathname.startsWith("/template-transaksi") ? "sidebar-group-toggle-active" : ""}`}
+            onClick={() => setMasterDataOpen((current) => !current)}
+            aria-expanded={masterDataOpen}
+          >
+            <span className="sidebar-link-icon"><Database size={20} /></span>
+            <span className="sidebar-link-text">Master Data</span>
+            <ChevronDown size={15} className={`sidebar-group-chevron ${masterDataOpen ? "sidebar-group-chevron-open" : ""}`} />
+          </button>
+          {masterDataOpen && (
+            <div className="sidebar-submenu">
+              {masterDataItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-link sidebar-submenu-link ${pathname.startsWith(item.href) ? "sidebar-link-active" : ""}`}
+                  onClick={close}
+                >
+                  <span className="sidebar-link-icon">{item.icon}</span>
+                  <span className="sidebar-link-text">{item.label}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {filteredItems.slice(4).map((item) => {
+            const isActive = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

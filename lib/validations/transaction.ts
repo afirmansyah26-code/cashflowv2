@@ -71,6 +71,16 @@ export const getTransactionsQuerySchema = z.object({
   sort: z.enum(['date_desc', 'date_asc', 'amount_desc', 'amount_asc']).catch('date_desc'),
 }).strict();
 
+export const getTrashTransactionsQuerySchema = getTransactionsQuerySchema.pick({
+  page: true,
+  limit: true,
+  search: true,
+  filter_type: true,
+  filter_category: true,
+  date_from: true,
+  date_to: true,
+});
+
 export const transactionIdSchema = z.coerce
   .number({
     message: "ID transaksi wajib diisi dan berupa angka",

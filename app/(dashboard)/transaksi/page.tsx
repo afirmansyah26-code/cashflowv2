@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { Copy, Pencil, SearchX, Trash2 } from "lucide-react";
+import { Copy, EllipsisVertical, Pencil, SearchX, Trash2, Undo2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -127,6 +127,7 @@ function TransactionPageContent() {
   const [showDelete, setShowDelete] = useState(false);
   const [editTransaction, setEditTransaction] = useState<TransactionRecord | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<TransactionRecord | null>(null);
+  const [mobileActionTransaction, setMobileActionTransaction] = useState<TransactionRecord | null>(null);
   const [saving, setSaving] = useState(false);
   const isAdmin = role.toLowerCase() === "admin";
 
@@ -255,12 +256,40 @@ function TransactionPageContent() {
 
   const handleDelete = async () => {
     if (!deleteTransaction) return;
+    const deletedTransactionId = deleteTransaction.id;
     setSaving(true);
     try {
-      const response = await fetch(`/api/transactions/${deleteTransaction.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/transactions/${deletedTransactionId}`, { method: "DELETE" });
       const data = await response.json();
       if (data.success) {
-        showToast("success", "Transaksi berhasil dihapus");
+        showToast("info", "Transaksi dipindahkan ke Recycle Bin.", {
+          duration: 6_000,
+          icon: <Trash2 size={18} />,
+          action: {
+            label: "Undo",
+            ariaLabel: "Batalkan penghapusan transaksi",
+            icon: <Undo2 size={13} />,
+            onClick: async () => {
+              try {
+                const restoreResponse = await fetch(
+                  `/api/transactions/${deletedTransactionId}/restore`,
+                  { method: "POST" },
+                );
+                const restoreResult = await restoreResponse.json();
+                if (!restoreResponse.ok || !restoreResult.success) {
+                  throw new Error(restoreResult.error || "Gagal memulihkan transaksi");
+                }
+                showToast("success", "Transaksi berhasil dipulihkan.");
+                notifyTransactionChanged();
+              } catch (error) {
+                showToast(
+                  "error",
+                  error instanceof Error ? error.message : "Gagal memulihkan transaksi",
+                );
+              }
+            },
+          },
+        });
         setShowDelete(false);
         setDeleteTransaction(null);
         notifyTransactionChanged();
@@ -314,20 +343,20 @@ function TransactionPageContent() {
         onLimitChange={(limit) => replaceQuery({ limit: limit === 25 ? null : String(limit), page: null })}
       />
 
-      <div className="card" aria-busy={refreshing}>
+      <div className="card transaction-list-card" aria-busy={refreshing}>
         {hasLoaded && <div className="transaction-result-summary">{resultSummary}</div>}
         <div className={`table-wrap ${refreshing && hasLoaded ? "transaction-table-refreshing" : ""}`}>
-          <table>
+          <table className="transaction-list-table">
             <thead>
               <tr>
-                <th style={{ width: isMobile ? 55 : 85, padding: isMobile ? "6px 4px" : undefined }}>Tanggal</th>
+                <th style={{ width: isMobile ? 48 : 85, padding: isMobile ? "6px 3px" : undefined }}>Tanggal</th>
                 {!isMobile && <th style={{ width: 60 }}>Jenis</th>}
-                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Kategori</th>
-                <th style={{ textAlign: "right", width: isMobile ? 60 : 100, padding: isMobile ? "6px 4px" : undefined }}>Jumlah</th>
-                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Catatan</th>
+                <th style={{ width: isMobile ? 72 : undefined, padding: isMobile ? "6px 3px" : undefined }}>Kategori</th>
+                <th style={{ textAlign: "right", width: isMobile ? 54 : 100, padding: isMobile ? "6px 3px" : undefined }}>Jumlah</th>
+                <th style={{ padding: isMobile ? "6px 3px" : undefined }}>Catatan</th>
                 {!isMobile && <th>Admin Notes</th>}
                 {!isMobile && <th style={{ width: 50 }}>Bukti</th>}
-                <th style={{ width: isMobile ? 108 : 116, padding: isMobile ? "6px 4px" : undefined }}>Aksi</th>
+                <th style={{ width: isMobile ? 42 : 116, padding: isMobile ? "6px 2px" : undefined, textAlign: isMobile ? "center" : undefined }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -386,41 +415,53 @@ function TransactionPageContent() {
                     </td>
                   )}
                   <td style={{ whiteSpace: "nowrap", padding: isMobile ? "6px 2px" : undefined }}>
-                    <div className="transaction-row-actions">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary btn-icon"
-                      onClick={() => openTransaction({ mode: "duplicate", transaction })}
-                      title="Duplicate Transaction"
-                      aria-label={`Duplicate Transaction #${transaction.id}`}
-                    >
-                      <Copy size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary btn-icon"
-                      onClick={() => {
-                        setEditTransaction(transaction);
-                        setShowEdit(true);
-                      }}
-                      title="Edit"
-                      aria-label={`Edit transaksi #${transaction.id}`}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger btn-icon"
-                      onClick={() => {
-                        setDeleteTransaction(transaction);
-                        setShowDelete(true);
-                      }}
-                      title="Hapus"
-                      aria-label={`Hapus transaksi #${transaction.id}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    </div>
+                    {isMobile ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary btn-icon transaction-mobile-action-trigger"
+                        onClick={() => setMobileActionTransaction(transaction)}
+                        title="Buka aksi transaksi"
+                        aria-label={`Buka aksi transaksi #${transaction.id}`}
+                      >
+                        <EllipsisVertical size={16} />
+                      </button>
+                    ) : (
+                      <div className="transaction-row-actions">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-secondary btn-icon"
+                          onClick={() => openTransaction({ mode: "duplicate", transaction })}
+                          title="Duplicate Transaction"
+                          aria-label={`Duplicate Transaction #${transaction.id}`}
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-secondary btn-icon"
+                          onClick={() => {
+                            setEditTransaction(transaction);
+                            setShowEdit(true);
+                          }}
+                          title="Edit"
+                          aria-label={`Edit transaksi #${transaction.id}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger btn-icon"
+                          onClick={() => {
+                            setDeleteTransaction(transaction);
+                            setShowDelete(true);
+                          }}
+                          title="Hapus"
+                          aria-label={`Hapus transaksi #${transaction.id}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -463,6 +504,55 @@ function TransactionPageContent() {
       />
 
       <Modal
+        isOpen={Boolean(mobileActionTransaction)}
+        onClose={() => setMobileActionTransaction(null)}
+        title="Aksi Transaksi"
+        size="sm"
+      >
+        <div className="transaction-mobile-action-menu">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            aria-label="Salin transaksi"
+            onClick={() => {
+              if (!mobileActionTransaction) return;
+              const transaction = mobileActionTransaction;
+              setMobileActionTransaction(null);
+              openTransaction({ mode: "duplicate", transaction });
+            }}
+          >
+            <Copy size={16} /> Salin Transaksi
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            aria-label="Edit transaksi"
+            onClick={() => {
+              if (!mobileActionTransaction) return;
+              setEditTransaction(mobileActionTransaction);
+              setMobileActionTransaction(null);
+              setShowEdit(true);
+            }}
+          >
+            <Pencil size={16} /> Edit Transaksi
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            aria-label="Hapus transaksi"
+            onClick={() => {
+              if (!mobileActionTransaction) return;
+              setDeleteTransaction(mobileActionTransaction);
+              setMobileActionTransaction(null);
+              setShowDelete(true);
+            }}
+          >
+            <Trash2 size={16} /> Hapus Transaksi
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={showDelete}
         onClose={() => setShowDelete(false)}
         title="Konfirmasi Hapus"
@@ -477,7 +567,7 @@ function TransactionPageContent() {
         <div style={{ textAlign: "center", padding: "16px 0" }}>
           <Trash2 size={48} color="var(--danger)" style={{ marginBottom: 12 }} />
           <p style={{ fontSize: 16, fontWeight: 600 }}>Yakin ingin menghapus transaksi ini?</p>
-          <p className="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
+          <p className="text-muted">Transaksi akan dipindahkan ke Recycle Bin dan dapat dipulihkan.</p>
         </div>
       </Modal>
 

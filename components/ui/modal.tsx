@@ -10,23 +10,33 @@ interface ModalProps {
   size?: "sm" | "md" | "lg";
   footer?: ReactNode;
   headerBadge?: string;
+  contentClassName?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children, size = "md", footer, headerBadge }: ModalProps) {
+let openModalCount = 0;
+let originalBodyOverflow = "";
+
+export default function Modal({ isOpen, onClose, title, children, size = "md", footer, headerBadge, contentClassName }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
+    if (!isOpen) return;
+    if (openModalCount === 0) originalBodyOverflow = document.body.style.overflow;
+    openModalCount += 1;
+    document.body.style.overflow = "hidden";
+    return () => {
+      openModalCount = Math.max(0, openModalCount - 1);
+      if (openModalCount === 0) document.body.style.overflow = originalBodyOverflow;
+    };
   }, [isOpen]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const openOverlays = Array.from(document.querySelectorAll(".modal-overlay"));
+      if (openOverlays.at(-1) !== overlayRef.current) return;
+      e.preventDefault();
+      onClose();
     };
     if (isOpen) window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
@@ -42,7 +52,7 @@ export default function Modal({ isOpen, onClose, title, children, size = "md", f
       className="modal-overlay"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="modal-content" style={{ maxWidth: widths[size] }}>
+      <div className={`modal-content${contentClassName ? ` ${contentClassName}` : ""}`} style={{ maxWidth: widths[size] }}>
         <div className="modal-header">
           <div className="modal-title-group">
             <h3 className="modal-title">{title}</h3>

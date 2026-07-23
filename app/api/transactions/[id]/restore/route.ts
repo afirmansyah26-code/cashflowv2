@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { transactionIdSchema } from "@/lib/validations/transaction";
 import { createAuditLog, AUDIT_ACTION } from "@/lib/audit";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   try {
@@ -25,6 +25,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (!existing) {
       return NextResponse.json({ error: "Transaksi di recycle bin tidak ditemukan" }, { status: 404 });
+    }
+
+    if (auth.session.role.toLowerCase() !== "admin" && existing.user_id !== auth.session.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const updated = await prisma.transactions.update({

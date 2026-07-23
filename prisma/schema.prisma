@@ -9,11 +9,12 @@ datasource db {
 }
 
 model categories {
-  id           Int            @id @default(autoincrement())
-  user_id      Int?
-  name         String         @db.VarChar(150)
-  created_at   DateTime?      @default(now()) @db.Timestamp(0)
-  transactions transactions[]
+  id                    Int                     @id @default(autoincrement())
+  user_id               Int?
+  name                  String                  @db.VarChar(150)
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  transactions          transactions[]
+  transaction_templates transaction_templates[]
 }
 
 model organization_profile {
@@ -60,6 +61,29 @@ model users {
   transactions    transactions[]
   deleted_transactions transactions[] @relation("transactions_deleted_byTousers")
   audit_logs      audit_logs[]
+  transaction_templates transaction_templates[]
+}
+
+model transaction_templates {
+  id          Int               @id @default(autoincrement())
+  user_id     Int?
+  name        String            @db.VarChar(150)
+  type        transactions_type
+  category_id Int?
+  amount      Decimal?          @db.Decimal(14, 2)
+  note        String?           @db.Text
+  admin_notes String?           @db.Text
+  is_global   Boolean           @default(false)
+  is_active   Boolean           @default(true)
+  created_at  DateTime          @default(now()) @db.Timestamp(0)
+  updated_at  DateTime          @default(now()) @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime?         @db.Timestamp(0)
+  users       users?            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_transaction_templates_user")
+  categories  categories?       @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "fk_transaction_templates_category")
+
+  @@index([user_id], map: "idx_transaction_templates_user")
+  @@index([category_id], map: "idx_transaction_templates_category")
+  @@index([is_global, is_active, deleted_at], map: "idx_transaction_templates_access")
 }
 
 model print_headers {

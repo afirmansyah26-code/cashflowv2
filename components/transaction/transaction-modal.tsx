@@ -1,8 +1,12 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Files, Save } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import SaveTemplateDialog from "@/components/transaction-template/save-template-dialog";
+import TemplatePicker from "@/components/transaction-template/template-picker";
+import type { TransactionTemplate } from "@/components/transaction-template/types";
 import TransactionForm, { formatAmountInput } from "./transaction-form";
 import type {
   TransactionCategory,
@@ -81,6 +85,9 @@ function OpenTransactionModal({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateActionsOpen, setTemplateActionsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const savingRef = useRef(false);
 
@@ -112,6 +119,7 @@ function OpenTransactionModal({
         && event.key.toLowerCase() === "s";
 
       if (!isCtrlS) return;
+      if (document.querySelectorAll(".modal-overlay").length > 1) return;
 
       event.preventDefault();
       if (!savingRef.current) formRef.current?.requestSubmit();
@@ -197,43 +205,116 @@ function OpenTransactionModal({
   const isEditing = mode === "edit";
   const isDuplicate = mode === "duplicate";
 
+  const applyTemplate = (template: TransactionTemplate) => {
+    setForm({
+      category_id: template.category_id ? String(template.category_id) : "",
+      type: template.type,
+      amount: template.amount === null
+        ? ""
+        : formatAmountInput(String(Math.round(template.amount))),
+      transaction_date: formatDateInputValue(),
+      note: template.note || "",
+      admin_notes: role.toLowerCase() === "admin" ? template.admin_notes || "" : "",
+      attachment: "",
+    });
+    setFile(null);
+    setTemplatePickerOpen(false);
+    showToast("success", `Template “${template.name}” diterapkan.`);
+  };
+
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title={isEditing ? "Edit Transaksi" : "Tambah Transaksi"}
-      headerBadge={isDuplicate ? "Duplicate Transaction" : undefined}
-      size="lg"
-      footer={(
-        <>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Batal</button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => formRef.current?.requestSubmit()}
+    <>
+      <Modal
+        isOpen
+        onClose={onClose}
+        title={isEditing ? "Edit Transaksi" : "Tambah Transaksi"}
+        headerBadge={isDuplicate ? "Duplicate Transaction" : undefined}
+        size="lg"
+        contentClassName="transaction-modal"
+        footer={(
+          <>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Batal</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => formRef.current?.requestSubmit()}
+              disabled={saving}
+            >
+              {uploading ? "Mengunggah..." : saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Simpan"}
+            </button>
+          </>
+        )}
+      >
+        {!isEditing && (
+          <section className={`transaction-template-section${templateActionsOpen ? " transaction-template-section-open" : ""}`}>
+            <button
+              type="button"
+              className="transaction-template-toggle"
+              aria-expanded={templateActionsOpen}
+              aria-controls="transaction-template-actions"
+              onClick={() => setTemplateActionsOpen((current) => !current)}
+            >
+              <span><Files size={15} /> Template Transaksi</span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </button>
+            <div id="transaction-template-actions" className="transaction-template-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setTemplatePickerOpen(true);
+                  setTemplateActionsOpen(false);
+                }}
+              >
+                <Files size={15} /> Gunakan Template
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSaveTemplateOpen(true);
+                  setTemplateActionsOpen(false);
+                }}
+              >
+                <Save size={15} /> Simpan sebagai Template
+              </button>
+            </div>
+          </section>
+        )}
+        <form ref={formRef} onSubmit={handleSubmit}>
+          <TransactionForm
+            mode={mode}
+            value={form}
+            categories={categories}
+            role={role}
+            file={file}
             disabled={saving}
-          >
-            {uploading ? "Mengunggah..." : saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Simpan"}
-          </button>
-        </>
-      )}
-    >
-      <form ref={formRef} onSubmit={handleSubmit}>
-        <TransactionForm
-          mode={mode}
-          value={form}
-          categories={categories}
-          role={role}
-          file={file}
-          disabled={saving}
-          uploading={uploading}
-          autoFocus
-          onChange={updateForm}
-          onFileChange={setFile}
-          onFileValidationError={(message) => showToast("error", message)}
+            uploading={uploading}
+            autoFocus
+            onChange={updateForm}
+            onFileChange={setFile}
+            onFileValidationError={(message) => showToast("error", message)}
+          />
+        </form>
+      </Modal>
+
+      {templatePickerOpen && (
+        <TemplatePicker
+          isOpen
+          onClose={() => setTemplatePickerOpen(false)}
+          onSelect={applyTemplate}
         />
-      </form>
-    </Modal>
+      )}
+
+      {saveTemplateOpen && (
+        <SaveTemplateDialog
+          isOpen
+          role={role}
+          form={form}
+          onClose={() => setSaveTemplateOpen(false)}
+        />
+      )}
+    </>
   );
 }
 

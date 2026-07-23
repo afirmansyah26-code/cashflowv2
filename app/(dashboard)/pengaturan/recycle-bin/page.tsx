@@ -1,176 +1,407 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, RefreshCcw, Trash2, X } from "lucide-react";
+import { ArchiveRestore, RefreshCcw, Trash2 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { useMediaQuery } from "@/components/use-media-query";
+import RecycleBinFilterToolbar, {
+  type RecycleBinFilterKey,
+  type RecycleBinFilters,
+} from "@/components/transaction/recycle-bin-filter-toolbar";
+import { useTransactionModal } from "@/components/transaction/transaction-modal-provider";
+import type { TransactionCategory } from "@/components/transaction/types";
 
-interface Transaction { id:number; category_name:string; type:string; amount:number; transaction_date:string; note:string|null; admin_notes:string|null; username:string; deleted_at:string; deleted_by:string; }
+interface RecycleBinTransaction {
+  id: number;
+  category_name: string;
+  type: "income" | "expense";
+  amount: number;
+  transaction_date: string;
+  note: string | null;
+  username: string;
+  deleted_at: string;
+  deleted_by: string;
+}
 
-function formatRupiah(n:number){return "Rp "+n.toLocaleString("id-ID");}
-function formatRupiahShort(n:number){if(n>=1000000)return(n/1000000).toFixed(n%1000000===0?0:1)+"M";if(n>=1000)return(n/1000).toFixed(n%1000===0?0:0)+"K";return String(n);}
+interface RecycleBinResponse {
+  transactions?: RecycleBinTransaction[];
+  total?: number;
+  totalPages?: number;
+  error?: string;
+}
+
+const emptyFilters: RecycleBinFilters = {
+  type: "",
+  category: "",
+  start: "",
+  end: "",
+};
+
+function formatRupiah(value: number) {
+  return `Rp ${value.toLocaleString("id-ID")}`;
+}
+
+function formatRupiahShort(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K`;
+  return String(value);
+}
+
+function formatTransactionDate(value: string, compact = false) {
+  const dateOnly = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (!dateOnly) return "-";
+  return new Date(`${dateOnly}T00:00:00.000Z`).toLocaleDateString("id-ID", {
+    ...(compact ? { day: "2-digit", month: "2-digit" } : {}),
+    timeZone: "UTC",
+  });
+}
+
+function formatDeletedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function RecycleBinPage() {
+  const router = useRouter();
   const { showToast } = useToast();
-  const [txns, setTxns] = useState<Transaction[]>([]);
+  const { transactionRevision, notifyTransactionChanged } = useTransactionModal();
+  const isMobile = useMediaQuery("(max-width:768px)");
+  const [transactions, setTransactions] = useState<RecycleBinTransaction[]>([]);
+  const [categories, setCategories] = useState<TransactionCategory[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  
-  const [showRestore, setShowRestore] = useState(false);
-  const [showPurge, setShowPurge] = useState(false);
-  const [targetTx, setTargetTx] = useState<Transaction | null>(null);
-  const [saving, setSaving] = useState(false);
-  const isMobile = useMediaQuery("(max-width:768px)");
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<RecycleBinFilters>(emptyFilters);
   const [authChecking, setAuthChecking] = useState(true);
-  const router = useRouter();
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [targetTransaction, setTargetTransaction] = useState<RecycleBinTransaction | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const loadData = useCallback(() => {
+  const apiQuery = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    fetch(`/api/transactions/trash?${params}`)
-      .then(r => r.json())
-      .then(d => {
-        setTxns(d.transactions || []);
-        setTotal(d.total || 0);
-        setTotalPages(d.totalPages || 1);
-      })
-      .catch(() => showToast("error", "Gagal memuat data recycle bin"))
-      .finally(() => setLoading(false));
-  }, [page, limit, showToast]);
+    if (search) params.set("search", search);
+    if (filters.type) params.set("filter_type", filters.type);
+    if (filters.category) params.set("filter_category", filters.category);
+    if (filters.start) params.set("date_from", filters.start);
+    if (filters.end) params.set("date_to", filters.end);
+    return params.toString();
+  }, [filters, limit, page, search]);
 
   useEffect(() => {
-    fetch("/api/me")
-      .then(r => r.json())
-      .then(d => {
-        if (d.role === "admin") {
-          setAuthChecking(false);
-        } else {
+    const controller = new AbortController();
+    Promise.all([
+      fetch("/api/me", { signal: controller.signal }).then((response) => response.json()),
+      fetch("/api/categories", { signal: controller.signal }).then((response) => response.json()),
+    ])
+      .then(([authData, categoryData]) => {
+        if (!authData.role) {
           router.push("/");
+          return;
         }
+        setCategories(categoryData.categories || []);
+        setAuthChecking(false);
       })
-      .catch(() => router.push("/"));
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        router.push("/");
+      });
+    return () => controller.abort();
   }, [router]);
 
-  useEffect(() => { 
-    if (!authChecking) {
-      loadData(); 
-    }
-  }, [loadData, authChecking]);
+  useEffect(() => {
+    if (authChecking) return;
+    const controller = new AbortController();
+    let active = true;
+
+    const loadData = async () => {
+      await Promise.resolve();
+      if (active) setRefreshing(true);
+      try {
+        const response = await fetch(`/api/transactions/trash?${apiQuery}`, {
+          signal: controller.signal,
+        });
+        const data = await response.json() as RecycleBinResponse;
+        if (!response.ok) throw new Error(data.error || "Gagal memuat data Recycle Bin");
+        if (!active) return;
+        setTransactions(data.transactions || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+        setHasLoaded(true);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (active) {
+          showToast("error", error instanceof Error ? error.message : "Gagal memuat data Recycle Bin");
+        }
+      } finally {
+        if (active) setRefreshing(false);
+      }
+    };
+
+    void loadData();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [apiQuery, authChecking, showToast, transactionRevision]);
 
   const handleRestore = async () => {
-    if (!targetTx) return;
+    if (!targetTransaction) return;
     setSaving(true);
     try {
-      const r = await fetch(`/api/transactions/${targetTx.id}/restore`, { method: "POST" });
-      const d = await r.json();
-      if (d.success) {
-        showToast("success", "Transaksi berhasil dipulihkan");
-        setShowRestore(false);
-        setTargetTx(null);
-        loadData();
-      } else {
-        showToast("error", d.error || "Gagal memulihkan transaksi");
-      }
-    } catch {
-      showToast("error", "Terjadi kesalahan");
+      const response = await fetch(`/api/transactions/${targetTransaction.id}/restore`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Gagal memulihkan transaksi");
+      showToast("success", "Transaksi berhasil dipulihkan.");
+      setTargetTransaction(null);
+      notifyTransactionChanged();
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "Gagal memulihkan transaksi");
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePurge = async () => {
-    if (!targetTx) return;
-    setSaving(true);
-    try {
-      const r = await fetch(`/api/transactions/${targetTx.id}/purge`, { method: "DELETE" });
-      const d = await r.json();
-      if (d.success) {
-        showToast("success", "Transaksi permanen dihapus");
-        setShowPurge(false);
-        setTargetTx(null);
-        loadData();
-      } else {
-        showToast("error", d.error || "Gagal menghapus transaksi");
-      }
-    } catch {
-      showToast("error", "Terjadi kesalahan");
-    } finally {
-      setSaving(false);
-    }
+  const removeFilter = (key: RecycleBinFilterKey) => {
+    setPage(1);
+    setFilters((current) => key === "date"
+      ? { ...current, start: "", end: "" }
+      : { ...current, [key]: "" });
   };
+
+  const resetFilters = () => {
+    setSearch("");
+    setFilters(emptyFilters);
+    setPage(1);
+  };
+
+  const hasActiveQuery = Boolean(search || Object.values(filters).some(Boolean));
 
   if (authChecking) {
-    return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>Memuat...</div>;
+    return <div className="page-loading-state">Memuat...</div>;
   }
 
   return (
     <div>
-      <div className="page-header">
+      <div className="page-header recycle-bin-page-header">
         <div>
-          <h1 className="page-title"><Trash2 size={24} style={{ display: "inline", marginRight: 8, verticalAlign: "middle" }} />Recycle Bin</h1>
-          <p className="text-muted" style={{ marginTop: 4 }}>Daftar transaksi yang telah dihapus.</p>
+          <h1 className="page-title">
+            <Trash2 size={24} aria-hidden="true" /> Recycle Bin
+          </h1>
+          <p className="text-muted">Transaksi yang dihapus dapat dipulihkan kembali.</p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select className="form-select" style={{ width: 100 }} value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
-            {[10, 25, 50, 100].map(l => <option key={l} value={l}>{l} baris</option>)}
-          </select>
-        </div>
+        <select
+          className="form-select recycle-bin-limit"
+          value={limit}
+          onChange={(event) => {
+            setLimit(Number(event.target.value));
+            setPage(1);
+          }}
+          aria-label="Jumlah baris per halaman"
+        >
+          {[10, 25, 50, 100].map((value) => (
+            <option key={value} value={value}>{value} baris</option>
+          ))}
+        </select>
       </div>
 
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: isMobile ? 55 : 85, padding: isMobile ? "6px 4px" : undefined }}>Tgl Trx</th>
-                {!isMobile && <th style={{ width: 60 }}>Jenis</th>}
-                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Kategori</th>
-                <th style={{ textAlign: "right", width: isMobile ? 60 : 100, padding: isMobile ? "6px 4px" : undefined }}>Jumlah</th>
-                {!isMobile && <th>Catatan</th>}
-                <th style={{ padding: isMobile ? "6px 4px" : undefined }}>Info Hapus</th>
-                <th style={{ width: isMobile ? 65 : 100, padding: isMobile ? "6px 4px" : undefined, textAlign: "center" }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? <tr><td colSpan={isMobile ? 5 : 7} style={{ textAlign: "center", padding: 32 }}>Memuat...</td></tr> :
-               txns.length === 0 ? <tr><td colSpan={isMobile ? 5 : 7} className="text-muted" style={{ textAlign: "center", padding: 32 }}>Tidak ada transaksi yang dihapus</td></tr> :
-               txns.map(t => (
-                <tr key={t.id}>
-                  <td style={{ whiteSpace: "nowrap", padding: isMobile ? "6px 4px" : undefined }}>{isMobile ? new Date(t.transaction_date).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit" }) : new Date(t.transaction_date).toLocaleDateString("id-ID")}</td>
-                  {!isMobile && <td><span className={`badge ${t.type === "income" ? "badge-income" : "badge-expense"}`}>{t.type === "income" ? "Masuk" : "Keluar"}</span></td>}
-                  <td style={{ padding: isMobile ? "6px 4px" : undefined }}>{isMobile && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", marginRight: 4, verticalAlign: "middle", background: t.type === "income" ? "var(--success)" : "var(--danger)" }}></span>}{t.category_name}</td>
-                  <td className={`text-amount ${t.type === "income" ? "text-income" : "text-expense"}`} style={{ textAlign: "right", padding: isMobile ? "6px 4px" : undefined }}>{isMobile ? formatRupiahShort(t.amount) : formatRupiah(t.amount)}</td>
-                  {!isMobile && <td style={{ color: "var(--text-secondary)" }}>{t.note || "-"}</td>}
-                  <td style={{ fontSize: 12, padding: isMobile ? "6px 4px" : undefined }}>
-                    <div style={{ color: "var(--danger)" }}>{new Date(t.deleted_at).toLocaleDateString("id-ID")}</div>
-                    <div className="text-muted">Oleh: {t.deleted_by}</div>
-                    {!isMobile && <div className="text-muted">Dibuat: {t.username}</div>}
-                  </td>
-                  <td style={{ whiteSpace: "nowrap", padding: isMobile ? "6px 2px" : undefined, textAlign: "center" }}>
-                    <button className="btn btn-sm btn-success btn-icon" onClick={() => { setTargetTx(t); setShowRestore(true); }} title="Pulihkan"><RefreshCcw size={14} /></button>
-                    {" "}
-                    <button className="btn btn-sm btn-danger btn-icon" onClick={() => { setTargetTx(t); setShowPurge(true); }} title="Hapus Permanen"><Trash2 size={14} /></button>
-                  </td>
+      <RecycleBinFilterToolbar
+        search={search}
+        filters={filters}
+        categories={categories}
+        refreshing={refreshing}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        onApply={(nextFilters) => {
+          setFilters(nextFilters);
+          setPage(1);
+        }}
+        onRemove={removeFilter}
+        onReset={resetFilters}
+      />
+
+      <div className={`card recycle-bin-card ${refreshing && hasLoaded ? "transaction-table-refreshing" : ""}`}>
+        <p className="transaction-result-summary">
+          {total > transactions.length
+            ? `Menampilkan ${transactions.length} dari ${total} transaksi`
+            : `${total} transaksi di Recycle Bin`}
+        </p>
+
+        {!hasLoaded && refreshing ? (
+          <div className="page-loading-state">Memuat...</div>
+        ) : transactions.length === 0 ? (
+          <div className="transaction-empty-filter">
+            <ArchiveRestore size={48} aria-hidden="true" />
+            <strong>Recycle Bin kosong.</strong>
+            {hasActiveQuery && (
+              <>
+                <span>Tidak ada transaksi yang sesuai dengan pencarian atau filter.</span>
+                <button type="button" className="btn btn-secondary" onClick={resetFilters}>Reset Filter</button>
+              </>
+            )}
+          </div>
+        ) : isMobile ? (
+          <div className="recycle-bin-mobile-list">
+            {transactions.map((transaction) => (
+              <article className="recycle-bin-mobile-item" key={transaction.id}>
+                <div className="recycle-bin-mobile-main">
+                  <div>
+                    <strong>{transaction.category_name}</strong>
+                    <span>{formatTransactionDate(transaction.transaction_date, true)}</span>
+                  </div>
+                  <strong className={transaction.type === "income" ? "text-income" : "text-expense"}>
+                    {formatRupiahShort(transaction.amount)}
+                  </strong>
+                </div>
+                <div className="recycle-bin-mobile-meta">
+                  <span className={`badge ${transaction.type === "income" ? "badge-income" : "badge-expense"}`}>
+                    {transaction.type === "income" ? "Pemasukan" : "Pengeluaran"}
+                  </span>
+                  <span>Dihapus {formatDeletedAt(transaction.deleted_at)}</span>
+                  <span>Oleh {transaction.deleted_by}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-success"
+                  onClick={() => setTargetTransaction(transaction)}
+                  aria-label={`Pulihkan transaksi ${transaction.category_name}`}
+                >
+                  <RefreshCcw size={14} /> Pulihkan
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal Transaksi</th>
+                  <th>Jenis</th>
+                  <th>Kategori</th>
+                  <th style={{ textAlign: "right" }}>Nominal</th>
+                  <th>Tanggal Dihapus</th>
+                  <th>Dihapus Oleh</th>
+                  <th style={{ textAlign: "center" }}>Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {totalPages > 1 && <div className="pagination"><button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>«</button>{Array.from({ length: Math.min(7, totalPages) }, (_, i) => { const s = Math.max(1, page - 3); const p = s + i; if (p > totalPages) return null; return <button key={p} className={`page-btn ${p === page ? "page-btn-active" : ""}`} onClick={() => setPage(p)}>{p}</button>; })}<button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>»</button></div>}
-        <div className="text-muted" style={{ textAlign: "center", marginTop: 8 }}>Total: {total} transaksi di tempat sampah</div>
+              </thead>
+              <tbody>
+                {transactions.map((transaction) => (
+                  <tr key={transaction.id}>
+                    <td>{formatTransactionDate(transaction.transaction_date)}</td>
+                    <td>
+                      <span className={`badge ${transaction.type === "income" ? "badge-income" : "badge-expense"}`}>
+                        {transaction.type === "income" ? "Pemasukan" : "Pengeluaran"}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{transaction.category_name}</strong>
+                      {transaction.note && <div className="text-muted recycle-bin-note">{transaction.note}</div>}
+                    </td>
+                    <td
+                      className={`text-amount ${transaction.type === "income" ? "text-income" : "text-expense"}`}
+                      style={{ textAlign: "right" }}
+                    >
+                      {formatRupiah(transaction.amount)}
+                    </td>
+                    <td>{formatDeletedAt(transaction.deleted_at)}</td>
+                    <td>
+                      <strong>{transaction.deleted_by}</strong>
+                      <div className="text-muted recycle-bin-note">Pemilik: {transaction.username}</div>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-success"
+                        onClick={() => setTargetTransaction(transaction)}
+                        title="Pulihkan transaksi"
+                        aria-label={`Pulihkan transaksi ${transaction.category_name}`}
+                      >
+                        <RefreshCcw size={14} /> Pulihkan
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button
+              type="button"
+              className="page-btn"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => current - 1)}
+              aria-label="Halaman sebelumnya"
+            >
+              «
+            </button>
+            {Array.from({ length: Math.min(7, totalPages) }, (_, index) => {
+              const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+              const pageNumber = start + index;
+              if (pageNumber > totalPages) return null;
+              return (
+                <button
+                  type="button"
+                  key={pageNumber}
+                  className={`page-btn ${pageNumber === page ? "page-btn-active" : ""}`}
+                  onClick={() => setPage(pageNumber)}
+                  aria-label={`Buka halaman ${pageNumber}`}
+                  aria-current={pageNumber === page ? "page" : undefined}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="page-btn"
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => current + 1)}
+              aria-label="Halaman berikutnya"
+            >
+              »
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Restore Confirm */}
-      <Modal isOpen={showRestore} onClose={() => setShowRestore(false)} title="Konfirmasi Pulihkan" size="sm" footer={<><button className="btn btn-secondary" onClick={() => setShowRestore(false)}>Batal</button><button className="btn btn-success" onClick={handleRestore} disabled={saving}>{saving ? "Memproses..." : "Pulihkan"}</button></>}>
-        <div style={{ textAlign: "center", padding: "16px 0" }}><RefreshCcw size={48} color="var(--success)" style={{ marginBottom: 12 }}/><p style={{ fontSize: 16, fontWeight: 600 }}>Pulihkan transaksi ini?</p><p className="text-muted">Transaksi akan kembali ke daftar utama.</p></div>
-      </Modal>
-
-      {/* Purge Confirm */}
-      <Modal isOpen={showPurge} onClose={() => setShowPurge(false)} title="Konfirmasi Hapus Permanen" size="sm" footer={<><button className="btn btn-secondary" onClick={() => setShowPurge(false)}>Batal</button><button className="btn btn-danger" onClick={handlePurge} disabled={saving}>{saving ? "Menghapus..." : "Hapus Permanen"}</button></>}>
-        <div style={{ textAlign: "center", padding: "16px 0" }}><Trash2 size={48} color="var(--danger)" style={{ marginBottom: 12 }}/><p style={{ fontSize: 16, fontWeight: 600 }}>Yakin ingin menghapus permanen?</p><p style={{ color: "var(--danger)", fontWeight: 500, marginTop: 8, fontSize: 14 }}>Data transaksi dan lampiran akan dihapus permanen.<br/>Tindakan ini tidak dapat dibatalkan.</p></div>
+      <Modal
+        isOpen={Boolean(targetTransaction)}
+        onClose={() => setTargetTransaction(null)}
+        title="Konfirmasi Pulihkan"
+        size="sm"
+        footer={(
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setTargetTransaction(null)}>
+              Batal
+            </button>
+            <button type="button" className="btn btn-success" onClick={handleRestore} disabled={saving}>
+              {saving ? "Memproses..." : "Pulihkan"}
+            </button>
+          </>
+        )}
+      >
+        <div className="recycle-bin-restore-confirm">
+          <RefreshCcw size={48} aria-hidden="true" />
+          <strong>Pulihkan transaksi ini?</strong>
+          <p className="text-muted">Transaksi akan kembali ke daftar utama.</p>
+        </div>
       </Modal>
     </div>
   );

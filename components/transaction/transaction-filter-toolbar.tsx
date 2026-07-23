@@ -168,12 +168,16 @@ export function getActiveFilterChips({
   return chips;
 }
 
-function DebouncedSearchInput({
+export function DebouncedSearchInput({
   initialValue,
   onCommit,
+  placeholder = "Cari catatan, kategori, nominal, nomor...",
+  ariaLabel = "Cari transaksi",
 }: {
   initialValue: string;
   onCommit: (value: string) => void;
+  placeholder?: string;
+  ariaLabel?: string;
 }) {
   const [value, setValue] = useState(initialValue);
   const [lastInitialValue, setLastInitialValue] = useState(initialValue);
@@ -220,8 +224,8 @@ function DebouncedSearchInput({
             commit(value, true);
           }
         }}
-        placeholder="Cari catatan, kategori, nominal, nomor..."
-        aria-label="Cari transaksi"
+        placeholder={placeholder}
+        aria-label={ariaLabel}
       />
       {value && (
         <button
