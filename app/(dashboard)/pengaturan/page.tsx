@@ -1,17 +1,43 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Save, Plus, Pencil, Trash2, Settings, Star, Printer, Eye, Keyboard } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import KeyboardShortcutList from "@/components/keyboard-shortcut-list";
+import TemplateManager from "@/components/transaction-template/template-manager";
 
 interface Category { id: number; name: string }
 interface User { id: number; username: string; role: string; created_at: string }
 interface PrintHeader { id: number; name: string; institution_name: string; subtitle: string | null; address: string | null; phone: string | null; bank_info: string | null; notary_info: string | null; logo: string | null; signer_name: string | null; signer_title: string | null; signer_city: string | null; is_default: boolean; }
 
-export default function PengaturanPage() {
+type SettingsTab = "umum" | "kategori" | "template" | "pengguna" | "kop";
+
+const settingsTabs: { key: SettingsTab; label: string }[] = [
+  { key: "umum", label: "Umum" },
+  { key: "kategori", label: "Kategori" },
+  { key: "template", label: "Template Transaksi" },
+  { key: "pengguna", label: "Pengguna" },
+  { key: "kop", label: "Kop Surat" },
+];
+
+function getSettingsTab(value: string | null): SettingsTab {
+  return settingsTabs.some((item) => item.key === value) ? value as SettingsTab : "umum";
+}
+
+function PengaturanContent() {
   const { showToast } = useToast();
-  const [tab, setTab] = useState<"umum" | "kategori" | "pengguna" | "kop">("umum");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = getSettingsTab(searchParams.get("tab"));
+
+  const changeTab = (nextTab: SettingsTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === "umum") params.delete("tab");
+    else params.set("tab", nextTab);
+    const query = params.toString();
+    router.replace(query ? `/pengaturan?${query}` : "/pengaturan", { scroll: false });
+  };
 
   // ── Umum (Org Profile) ──
   const [orgForm, setOrgForm] = useState({ app_name: "", name: "", subtitle: "", address: "", logo_path: "" });
@@ -155,13 +181,6 @@ export default function PengaturanPage() {
     if (d.success) { showToast("success", d.message); loadKop(); } else showToast("error", d.error);
   };
 
-  const tabs = [
-    { key: "umum" as const, label: "Umum" },
-    { key: "kategori" as const, label: "Kategori" },
-    { key: "pengguna" as const, label: "Pengguna" },
-    { key: "kop" as const, label: "Kop Surat" },
-  ];
-
   return (
     <div>
       <div className="page-header">
@@ -169,12 +188,12 @@ export default function PengaturanPage() {
       </div>
 
       {/* Tabs */}
-      <div className="settings-tabs no-print" style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-color)", marginBottom: 20 }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
+      <div className="settings-tabs no-print" style={{ display: "flex", gap: 0, overflowX: "auto", borderBottom: "2px solid var(--border-color)", marginBottom: 20 }}>
+        {settingsTabs.map(t => (
+          <button key={t.key} onClick={() => changeTab(t.key)} style={{
             padding: "10px 24px", background: "none", border: "none", borderBottom: tab === t.key ? "2px solid var(--accent)" : "2px solid transparent",
             marginBottom: -2, color: tab === t.key ? "var(--accent)" : "var(--text-secondary)", fontWeight: tab === t.key ? 700 : 500,
-            fontSize: 14, cursor: "pointer", transition: "all .2s", fontFamily: "inherit",
+            fontSize: 14, cursor: "pointer", transition: "all .2s", fontFamily: "inherit", whiteSpace: "nowrap", flex: "0 0 auto",
           }}>{t.label}</button>
         ))}
       </div>
@@ -228,6 +247,9 @@ export default function PengaturanPage() {
           </tbody></table></div>
         </div>
       )}
+
+      {/* ── Tab: Template Transaksi ── */}
+      {tab === "template" && <TemplateManager embedded />}
 
       {/* ── Tab: Pengguna ── */}
       {tab === "pengguna" && (
@@ -374,5 +396,13 @@ export default function PengaturanPage() {
         <div style={{ textAlign: "center", padding: 16 }}><Trash2 size={48} color="var(--danger)" /><p style={{ marginTop: 12, fontWeight: 600 }}>Hapus user &quot;{deleteUser?.username}&quot;?</p></div>
       </Modal>
     </div>
+  );
+}
+
+export default function PengaturanPage() {
+  return (
+    <Suspense fallback={<div className="card" style={{ padding: 32, textAlign: "center" }}>Memuat pengaturan...</div>}>
+      <PengaturanContent />
+    </Suspense>
   );
 }
